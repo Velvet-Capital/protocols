@@ -17,7 +17,7 @@ async function main() {
   await run("compile");
 
   // get current chainId
-  const chainId = ethers.provider.network.chainId;
+  const { chainId } = await ethers.provider.getNetwork();
   const addresses = chainIdToAddresses[chainId];
 
   // We get the contract to deploy
@@ -37,12 +37,16 @@ async function main() {
   const AccessController = await ethers.getContractFactory("AccessController");
   const accessProxy = await upgrades.deployProxy(AccessController);
   await accessProxy.deployed();
+  accessProxy.initialize();
 
   const IndexManager = await ethers.getContractFactory("IndexManager");
   const managerProxy = await upgrades.deployProxy(IndexManager, [
-    accessProxy.addresses.PancakeSwapRouterAddress,
+    accessProxy.address,
+    addresses.PancakeSwapRouterAddress,
+    addresses.Module,
   ]);
   await managerProxy.deployed();
+  managerProxy.initialize();
 
   const IndexSwap = await ethers.getContractFactory("IndexSwap");
   const indexProxy = await upgrades.deployProxy(IndexSwap, [
@@ -57,6 +61,8 @@ async function main() {
   ]);
   await indexProxy.deployed();
 
+  // init index swap
+
   const Rebalancing = await ethers.getContractFactory("Rebalancing");
   const rebalanceProxy = await upgrades.deployProxy(Rebalancing, [
     libraryProxy.address,
@@ -64,10 +70,8 @@ async function main() {
     accessProxy.address,
   ]);
 
-  const priceOracle = PriceOracle.attach(priceProxy.address);
-  console.log(
-    `You did it! View your tx here: ${ETHERSCAN_TX_URL}${priceOracle.deployTransaction.hash}`
-  );
+  console.log(`IndexManager deployed to: ${managerProxy.address}`);
+  console.log(`IndexSwap deployed to: ${indexProxy.address}`);
 }
 
 // We recommend this pattern to be able to use async/await everywhere

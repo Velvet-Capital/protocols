@@ -90,7 +90,7 @@ contract IndexSwap is TokenBase {
         IndexSwapLibrary _indexSwapLibrary,
         IndexManager _indexManager,
         AccessController _accessController
-    ) public initializer {
+    ) public {
         __TokenBase_init(_name, _symbol);
 
         vault = _vault;
@@ -162,6 +162,7 @@ contract IndexSwap is TokenBase {
      */
     function investInFund() public payable nonReentrant {
         uint256 tokenAmount = msg.value;
+        require(_tokens.length != 0, "NOT INITIALIZED");
         require(
             tokenAmount <= MAX_INVESTMENTAMOUNT,
             "Amount exceeds maximum investment amount!"

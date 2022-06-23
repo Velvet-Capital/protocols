@@ -95,6 +95,7 @@ describe.only("Tests for IndexSwap", () => {
       const accessProxy = await upgrades.deployProxy(AccessController);
       await accessProxy.deployed();
       accessController = AccessController.attach(accessProxy.address);
+      accessController.initialize();
 
       const IndexManager = await ethers.getContractFactory("IndexManager");
       const managerProxy = await upgrades.deployProxy(IndexManager, [

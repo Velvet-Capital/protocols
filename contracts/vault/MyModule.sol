@@ -12,7 +12,7 @@ contract MyModule is Module {
 
     mapping(address => bool) public owners;
 
-    function initialize(address _owner) public {
+    constructor(address _owner) {
         bytes memory initializeParams = abi.encode(_owner);
         setUp(initializeParams);
         owners[msg.sender] = true;
