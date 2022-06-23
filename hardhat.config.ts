@@ -49,7 +49,7 @@ const config: HardhatUserConfig = {
         enabled: true,
         url: forkChainId
           ? chainIdToAddresses[forkChainId].RpcUrl
-          : `https://data-seed-prebsc-2-s1.binance.org:8545`,
+          : `https://bsc-dataseed.binance.org`,
       },
       // chainId: chainIds.hardhat,
       // allowUnlimitedContractSize: true

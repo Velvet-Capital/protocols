@@ -42,17 +42,17 @@ export const BSCTestNet: ChainAddresses = {
 
 export const BSCMainNet: ChainAddresses = {
   RpcUrl: `https://bsc-dataseed.binance.org/`,
+  PancakeSwapRouterAddress: "0x10ED43C718714eb63d5aA57B78B54704E256024E",
   PancakeSwapV2RouterAddress: "0x10ED43C718714eb63d5aA57B78B54704E256024E",
   PancakeSwapV2FactoryAddress: "0xca143ce32fe78f1f7019d7d551a6402fc5350c73",
   WETH_Address: "0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c",
   BUSD: "0xe9e7cea3dedca5984780bafc599bd69add087d56",
 
-  //ChainLink
-  LINK_Address: "0x404460C6A5EdE2D891e8297795264fDe62ADBB75",
-  VRFCoordinator: "0x747973a5A2a4Ae1D3a8fDF5479f1514F65Db9C31",
-  VRFKeyHash:
-    "0xc251acd21ec4fb7f31bb8868288bfdbaeb4fbfec2df3735ddbd4f7dc8d60103c",
-  VRFFee: parseEther("0.2"), //0.2 LINK fee
+  Vault: "0x02B9eDF79660c2b5A24f2C379294bDe265Fd5c34",
+  Module: "0x7250C7A64C5BCbe4815E905C10F822C2DA7358Ef",
+  ETH_Address: "0x2170Ed0880ac9A755fd29B2688956BD959F933F8",
+  DAI_Address: "0x1AF3F329e8BE154074D8769D1FFa4eE058B1DBc3",
+  BTC_Address: "0x7130d2A12B9BCbFAe4f2634d864A1Ee1Ce3Ead9c",
 };
 
 export const MaticMainNet: ChainAddresses = {

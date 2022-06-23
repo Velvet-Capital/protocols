@@ -36,7 +36,7 @@ describe.only("Tests for IndexSwap", () => {
   let token;
   const forkChainId: any = process.env.FORK_CHAINID;
   const provider = ethers.provider;
-  const chainId: any = forkChainId ? forkChainId : 97;
+  const chainId: any = forkChainId ? forkChainId : 56;
   const addresses = chainIdToAddresses[chainId];
   var bnbBefore = 0;
   var bnbAfter = 0;
@@ -100,6 +100,7 @@ describe.only("Tests for IndexSwap", () => {
       const managerProxy = await upgrades.deployProxy(IndexManager, [
         accessController.address,
         addresses.PancakeSwapRouterAddress,
+        addresses.Module,
       ]);
       await managerProxy.deployed();
       indexManager = IndexManager.attach(managerProxy.address);
@@ -109,7 +110,7 @@ describe.only("Tests for IndexSwap", () => {
         "INDEXLY",
         "IDX",
         addresses.WETH_Address,
-        vault.address,
+        addresses.Vault,
         "500000000000000000000",
         indexSwapLibrary.address,
         indexManager.address,
@@ -127,21 +128,9 @@ describe.only("Tests for IndexSwap", () => {
       await rebalanceProxy.deployed();
       rebalancing = Rebalancing.attach(rebalanceProxy.address);
 
-      await busdInstance
-        .connect(vault)
-        .approve(indexManager.address, approve_amount);
-      await wbnbInstance
-        .connect(vault)
-        .approve(indexManager.address, approve_amount);
-      await daiInstance
-        .connect(vault)
-        .approve(indexManager.address, approve_amount);
-      await ethInstance
-        .connect(vault)
-        .approve(indexManager.address, approve_amount);
-      await btcInstance
-        .connect(vault)
-        .approve(indexManager.address, approve_amount);
+      const MyModule = ethers.getContractFactory("MyModule");
+      let myModule = (await MyModule).attach(addresses.Module);
+      await myModule.addOwner(indexManager.address);
 
       console.log("indexSwap deployed to:", indexSwap.address);
     });
@@ -200,10 +189,6 @@ describe.only("Tests for IndexSwap", () => {
 
       it("BNB amount increases after investing", async () => {
         expect(bnbAfter).to.be.gt(bnbBefore);
-      });
-
-      it("should Rebalance", async () => {
-        await rebalancing.rebalance(indexSwap.address);
       });
 
       it("should revert when Rebalance is called from an account which is not assigned as asset manager", async () => {

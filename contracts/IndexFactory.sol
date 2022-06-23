@@ -7,6 +7,7 @@ import "./core/IndexSwapLibrary.sol";
 import "./core/IndexManager.sol";
 import "./oracle/PriceOracle.sol";
 import "./rebalance/Rebalancing.sol";
+import "./vault/MyModule.sol";
 
 contract IndexFactory {
     event IndexCreation(
@@ -27,6 +28,7 @@ contract IndexFactory {
         address _uniswapRouter,
         address _outAsset,
         address _vault,
+        MyModule _myModule,
         uint256 _maxInvestmentAmount
     ) public returns (IndexSwap index) {
         // Price Oracle
@@ -43,7 +45,7 @@ contract IndexFactory {
 
         // Index Manager
         IndexManager _indexManager = new IndexManager();
-        _indexManager.initialize(_accessController, _uniswapRouter);
+        _indexManager.initialize(_accessController, _uniswapRouter, _myModule);
 
         // Index Swap
         index = new IndexSwap();

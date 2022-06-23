@@ -38,7 +38,7 @@ describe.skip("Tests for IndexFactory", () => {
   let token;
   const forkChainId: any = process.env.FORK_CHAINID;
   const provider = ethers.provider;
-  const chainId: any = forkChainId ? forkChainId : 97;
+  const chainId: any = forkChainId ? forkChainId : 56;
   const addresses = chainIdToAddresses[chainId];
   var bnbBefore = 0;
   var bnbAfter = 0;
@@ -87,9 +87,11 @@ describe.skip("Tests for IndexFactory", () => {
         "IDX",
         addresses.PancakeSwapRouterAddress,
         addresses.WETH_Address,
-        vault.address,
+        addresses.Vault,
+        addresses.Module,
         "500000000000000000000"
       );
+      index.wait();
 
       const result = index.to;
       if (result) {
@@ -108,21 +110,9 @@ describe.skip("Tests for IndexFactory", () => {
       );
       await rebalancing.deployed();
 
-      await busdInstance
-        .connect(vault)
-        .approve(indexManager.address, approve_amount);
-      await wbnbInstance
-        .connect(vault)
-        .approve(indexManager.address, approve_amount);
-      await daiInstance
-        .connect(vault)
-        .approve(indexManager.address, approve_amount);
-      await ethInstance
-        .connect(vault)
-        .approve(indexManager.address, approve_amount);
-      await btcInstance
-        .connect(vault)
-        .approve(indexManager.address, approve_amount);
+      const MyModule = ethers.getContractFactory("MyModule");
+      let myModule = (await MyModule).attach(addresses.Module);
+      await myModule.addOwner(indexManager.address);
 
       console.log("indexSwap deployed to:", indexSwap.address);
     });
@@ -136,7 +126,8 @@ describe.skip("Tests for IndexFactory", () => {
           "IDX",
           addresses.PancakeSwapRouterAddress,
           addresses.WETH_Address,
-          vault.address,
+          addresses.Vault,
+          addresses.Module,
           "500000000000000000000"
         );
 

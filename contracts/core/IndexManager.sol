@@ -8,17 +8,21 @@ import "../interfaces/IWETH.sol";
 import "../core/IndexSwapLibrary.sol";
 import "./IndexSwap.sol";
 import "../access/AccessController.sol";
+import "../vault/MyModule.sol";
 
 contract IndexManager {
     IUniswapV2Router02 public pancakeSwapRouter;
     AccessController public accessController;
+    MyModule internal gnosisSafe;
 
     function initialize(
         AccessController _accessController,
-        address _pancakeSwapAddress
+        address _pancakeSwapAddress,
+        MyModule _myModule
     ) public {
         pancakeSwapRouter = IUniswapV2Router02(_pancakeSwapAddress);
         accessController = _accessController;
+        gnosisSafe = _myModule;
     }
 
     /**
@@ -45,7 +49,7 @@ contract IndexManager {
         uint256 amount,
         address to
     ) public onlyIndexManager {
-        TransferHelper.safeTransferFrom(t, _index.vault(), to, amount);
+        gnosisSafe.executeTransactionOther(to, amount, t);
     }
 
     /**
