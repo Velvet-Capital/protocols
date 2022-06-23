@@ -75,48 +75,20 @@ describe.skip("Tests for IndexFactory", () => {
     before(async () => {
       accounts = await ethers.getSigners();
       [owner, investor1, nonOwner, vault, addr1, addr2, ...addrs] = accounts;
-      const PriceOracle = await ethers.getContractFactory("PriceOracle");
-      priceOracle = await PriceOracle.deploy();
-
-      await priceOracle.deployed();
-      await priceOracle.initialize(addresses.PancakeSwapRouterAddress);
 
       const IndexFactory = await ethers.getContractFactory("IndexFactory");
       indexFactory = await IndexFactory.deploy();
       await indexFactory.deployed();
-
-      const IndexSwapLibrary = await ethers.getContractFactory(
-        "IndexSwapLibrary"
-      );
-      indexSwapLibrary = await IndexSwapLibrary.deploy();
-      indexSwapLibrary.initialize(priceOracle.address, addresses.WETH_Address);
-      await indexSwapLibrary.deployed();
-
-      const AccessController = await ethers.getContractFactory(
-        "AccessController"
-      );
-      accessController = await AccessController.deploy();
-      await accessController.deployed();
-
-      const IndexManager = await ethers.getContractFactory("IndexManager");
-      indexManager = await IndexManager.deploy();
-      indexManager.initialize(
-        accessController.address,
-        addresses.PancakeSwapRouterAddress
-      );
-      await indexManager.deployed();
 
       let indexAddress = "";
 
       const index = await indexFactory.createIndex(
         "INDEXLY",
         "IDX",
+        addresses.PancakeSwapRouterAddress,
         addresses.WETH_Address,
         vault.address,
-        "500000000000000000000",
-        indexSwapLibrary.address,
-        indexManager.address,
-        accessController.address
+        "500000000000000000000"
       );
 
       const result = index.to;
@@ -153,8 +125,6 @@ describe.skip("Tests for IndexFactory", () => {
         .approve(indexManager.address, approve_amount);
 
       console.log("indexSwap deployed to:", indexSwap.address);
-
-      console.log("indexSwap deployed to:", indexSwap.address);
     });
 
     describe("IndexFactory Contract", function () {
@@ -164,12 +134,10 @@ describe.skip("Tests for IndexFactory", () => {
         const index = await indexFactory.createIndex(
           "INDEXLY",
           "IDX",
+          addresses.PancakeSwapRouterAddress,
           addresses.WETH_Address,
           vault.address,
-          "500000000000000000000",
-          indexSwapLibrary.address,
-          indexManager.address,
-          accessController.address
+          "500000000000000000000"
         );
 
         console.log("index return from factory", index);

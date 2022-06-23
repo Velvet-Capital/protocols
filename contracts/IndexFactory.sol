@@ -1,8 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4 || ^0.7.6 || ^0.8.0;
 
-import "./core/IndexSwap.sol";
 import "./access/AccessController.sol";
+import "./core/IndexSwap.sol";
+import "./core/IndexSwapLibrary.sol";
+import "./core/IndexManager.sol";
+import "./oracle/PriceOracle.sol";
+import "./rebalance/Rebalancing.sol";
 
 contract IndexFactory {
     event IndexCreation(
@@ -20,13 +24,28 @@ contract IndexFactory {
     function createIndex(
         string memory _name,
         string memory _symbol,
+        address _uniswapRouter,
         address _outAsset,
         address _vault,
-        uint256 _maxInvestmentAmount,
-        IndexSwapLibrary _indexSwapLibrary,
-        IndexManager _indexManager,
-        AccessController _accessController
+        uint256 _maxInvestmentAmount
     ) public returns (IndexSwap index) {
+        // Price Oracle
+        PriceOracle priceOracle = new PriceOracle();
+        priceOracle.initialize(_uniswapRouter);
+
+        // Index Swap Library
+        IndexSwapLibrary _indexSwapLibrary = new IndexSwapLibrary();
+        _indexSwapLibrary.initialize(address(priceOracle), _outAsset);
+
+        // Access Controller
+        AccessController _accessController = new AccessController();
+        _accessController.initialize();
+
+        // Index Manager
+        IndexManager _indexManager = new IndexManager();
+        _indexManager.initialize(_accessController, _uniswapRouter);
+
+        // Index Swap
         index = new IndexSwap();
         index.initialize(
             _name,
@@ -34,6 +53,14 @@ contract IndexFactory {
             _outAsset,
             _vault,
             _maxInvestmentAmount,
+            _indexSwapLibrary,
+            _indexManager,
+            _accessController
+        );
+
+        // Rebalancing
+        Rebalancing rebalancing = new Rebalancing();
+        rebalancing.initialize(
             _indexSwapLibrary,
             _indexManager,
             _accessController
