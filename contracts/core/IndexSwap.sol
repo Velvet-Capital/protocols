@@ -90,7 +90,7 @@ contract IndexSwap is TokenBase {
         IndexSwapLibrary _indexSwapLibrary,
         IndexManager _indexManager,
         AccessController _accessController
-    ) public initializer {
+    ) public {
         __TokenBase_init(_name, _symbol);
 
         vault = _vault;
