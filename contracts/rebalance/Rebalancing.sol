@@ -82,15 +82,9 @@ contract Rebalancing is ReentrancyGuardUpgradeable {
                 );
 
                 if (t == indexManager.getETH()) {
-                    indexManager._pullFromVault(
-                        _index,
-                        t,
-                        swapAmount,
-                        address(this)
-                    );
+                    indexManager._pullFromVault(t, swapAmount, address(this));
                 } else {
                     indexManager._pullFromVault(
-                        _index,
                         t,
                         swapAmount,
                         address(indexManager)
@@ -238,14 +232,12 @@ contract Rebalancing is ReentrancyGuardUpgradeable {
 
                     if (t == indexManager.getETH()) {
                         indexManager._pullFromVault(
-                            _index,
                             t,
                             tokenBalance,
                             address(this)
                         );
                     } else {
                         indexManager._pullFromVault(
-                            _index,
                             t,
                             tokenBalance,
                             address(indexManager)

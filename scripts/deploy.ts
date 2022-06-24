@@ -21,57 +21,42 @@ async function main() {
   const addresses = chainIdToAddresses[chainId];
 
   // We get the contract to deploy
-  const PriceOracle = await ethers.getContractFactory("PriceOracle");
-  const priceProxy = await upgrades.deployProxy(PriceOracle, [
-    addresses.PancakeSwapRouterAddress,
-  ]);
-  await priceProxy.deployed();
-
-  const IndexSwapLibrary = await ethers.getContractFactory("IndexSwapLibrary");
-  const libraryProxy = await upgrades.deployProxy(IndexSwapLibrary, [
-    priceProxy.address,
-    addresses.WETH_Address,
-  ]);
-  await libraryProxy.deployed();
-
   const AccessController = await ethers.getContractFactory("AccessController");
   const accessProxy = await upgrades.deployProxy(AccessController);
   await accessProxy.deployed();
-  accessProxy.initialize();
 
   const IndexManager = await ethers.getContractFactory("IndexManager");
-  const managerProxy = await upgrades.deployProxy(IndexManager, [
+  const managerProxy = await IndexManager.deploy(
     accessProxy.address,
     addresses.PancakeSwapRouterAddress,
-    addresses.Module,
-  ]);
+    addresses.Module
+  );
   await managerProxy.deployed();
-  managerProxy.initialize();
 
   const IndexSwap = await ethers.getContractFactory("IndexSwap");
   const indexProxy = await upgrades.deployProxy(IndexSwap, [
-    "INDEXLY",
-    "IDX",
+    "METAVERSE Portfolio",
+    "META",
     addresses.WETH_Address,
     addresses.Vault,
     "500000000000000000000",
-    libraryProxy.address,
+    addresses.IndexSwapLibrary,
     managerProxy.address,
     accessProxy.address,
   ]);
   await indexProxy.deployed();
 
-  // init index swap
-
   const Rebalancing = await ethers.getContractFactory("Rebalancing");
   const rebalanceProxy = await upgrades.deployProxy(Rebalancing, [
-    libraryProxy.address,
+    addresses.IndexSwapLibrary,
     managerProxy.address,
     accessProxy.address,
   ]);
+  await rebalanceProxy.deployed();
 
   console.log(`IndexManager deployed to: ${managerProxy.address}`);
   console.log(`IndexSwap deployed to: ${indexProxy.address}`);
+  console.log(`Rebalancing deployed to: ${rebalanceProxy.address}`);
 }
 
 // We recommend this pattern to be able to use async/await everywhere

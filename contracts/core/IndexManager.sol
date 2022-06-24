@@ -44,7 +44,6 @@ contract IndexManager {
      * @notice Transfer tokens from vault to a specific address
      */
     function _pullFromVault(
-        IndexSwap _index,
         address t,
         uint256 amount,
         address to

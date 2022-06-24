@@ -89,7 +89,8 @@ describe.skip("Tests for IndexFactory", () => {
         addresses.WETH_Address,
         addresses.Vault,
         addresses.Module,
-        "500000000000000000000"
+        "500000000000000000000",
+        addresses.IndexSwapLibrary
       );
       index.wait();
 
@@ -128,7 +129,8 @@ describe.skip("Tests for IndexFactory", () => {
           addresses.WETH_Address,
           addresses.Vault,
           addresses.Module,
-          "500000000000000000000"
+          "500000000000000000000",
+          addresses.IndexSwapLibrary
         );
 
         console.log("index return from factory", index);
