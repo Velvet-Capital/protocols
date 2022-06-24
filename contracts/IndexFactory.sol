@@ -27,16 +27,9 @@ contract IndexFactory {
         address _uniswapRouter,
         address _outAsset,
         address _vault,
-        uint256 _maxInvestmentAmount
+        uint256 _maxInvestmentAmount,
+        IndexSwapLibrary _indexSwapLibrary
     ) public returns (IndexSwap index) {
-        // Price Oracle
-        PriceOracle priceOracle = new PriceOracle();
-        priceOracle.initialize(_uniswapRouter);
-
-        // Index Swap Library
-        IndexSwapLibrary _indexSwapLibrary = new IndexSwapLibrary();
-        _indexSwapLibrary.initialize(address(priceOracle), _outAsset);
-
         // Access Controller
         AccessController _accessController = new AccessController();
         _accessController.initialize();

@@ -88,7 +88,8 @@ describe.skip("Tests for IndexFactory", () => {
         addresses.PancakeSwapRouterAddress,
         addresses.WETH_Address,
         vault.address,
-        "500000000000000000000"
+        "500000000000000000000",
+        addresses.IndexSwapLibrary
       );
 
       const result = index.to;
@@ -137,7 +138,8 @@ describe.skip("Tests for IndexFactory", () => {
           addresses.PancakeSwapRouterAddress,
           addresses.WETH_Address,
           vault.address,
-          "500000000000000000000"
+          "500000000000000000000",
+          addresses.IndexSwapLibrary
         );
 
         console.log("index return from factory", index);

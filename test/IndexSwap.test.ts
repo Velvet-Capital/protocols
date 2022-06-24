@@ -202,10 +202,6 @@ describe.only("Tests for IndexSwap", () => {
         expect(bnbAfter).to.be.gt(bnbBefore);
       });
 
-      it("should Rebalance", async () => {
-        await rebalancing.rebalance(indexSwap.address);
-      });
-
       it("should revert when Rebalance is called from an account which is not assigned as asset manager", async () => {
         await expect(
           rebalancing.connect(nonOwner).rebalance(indexSwap.address)
