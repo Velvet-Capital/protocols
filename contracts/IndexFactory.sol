@@ -44,8 +44,11 @@ contract IndexFactory {
         _accessController.initialize();
 
         // Index Manager
-        IndexManager _indexManager = new IndexManager();
-        _indexManager.initialize(_accessController, _uniswapRouter, _myModule);
+        IndexManager _indexManager = new IndexManager(
+            _accessController,
+            _uniswapRouter,
+            _myModule
+        );
 
         // Index Swap
         index = new IndexSwap();

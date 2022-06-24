@@ -92,19 +92,17 @@ describe.only("Tests for IndexSwap", () => {
       const AccessController = await ethers.getContractFactory(
         "AccessController"
       );
-      const accessProxy = await upgrades.deployProxy(AccessController);
-      await accessProxy.deployed();
-      accessController = AccessController.attach(accessProxy.address);
-      accessController.initialize();
+      const accessController = await AccessController.deploy();
+      await accessController.deployed();
 
       const IndexManager = await ethers.getContractFactory("IndexManager");
-      const managerProxy = await upgrades.deployProxy(IndexManager, [
+      const indexManager = await IndexManager.deploy(
         accessController.address,
         addresses.PancakeSwapRouterAddress,
-        addresses.Module,
-      ]);
-      await managerProxy.deployed();
-      indexManager = IndexManager.attach(managerProxy.address);
+        addresses.Module
+      );
+
+      await indexManager.deployed();
 
       const IndexSwap = await ethers.getContractFactory("IndexSwap");
       const indexProxy = await upgrades.deployProxy(IndexSwap, [
