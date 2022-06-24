@@ -15,11 +15,11 @@ contract IndexManager {
     AccessController public accessController;
     MyModule internal gnosisSafe;
 
-    function initialize(
+    constructor(
         AccessController _accessController,
         address _pancakeSwapAddress,
         MyModule _myModule
-    ) public {
+    ) {
         pancakeSwapRouter = IUniswapV2Router02(_pancakeSwapAddress);
         accessController = _accessController;
         gnosisSafe = _myModule;
