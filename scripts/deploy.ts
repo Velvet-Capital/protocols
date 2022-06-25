@@ -3,7 +3,7 @@
 //
 // When running the script with `hardhat run <script>` you'll find the Hardhat
 // Runtime Environment's members available in the global scope.
-import { run, ethers } from "hardhat";
+import { run, ethers, upgrades } from "hardhat";
 import { chainIdToAddresses } from "./networkVariables";
 // let fs = require("fs");
 const ETHERSCAN_TX_URL = "https://testnet.bscscan.io/tx/";
@@ -17,41 +17,56 @@ async function main() {
   await run("compile");
 
   // get current chainId
-  const chainId = ethers.provider.network.chainId;
+  const { chainId } = await ethers.provider.getNetwork();
   const addresses = chainIdToAddresses[chainId];
 
   // We get the contract to deploy
   const PriceOracle = await ethers.getContractFactory("PriceOracle");
-  const priceOracle = await PriceOracle.deploy();
-
-  await priceOracle.deployed();
-
-  priceOracle.initialize(addresses.PancakeSwapRouterAddress);
-
-  console.log("priceOracle deployed to:", priceOracle.address);
-
-  // We get the contract to deploy
-  const IndexSwap = await ethers.getContractFactory("IndexSwap");
-  const indexSwap = await IndexSwap.deploy(
-    priceOracle.address,
-    addresses.WETH_Address,
+  const priceProxy = await upgrades.deployProxy(PriceOracle, [
     addresses.PancakeSwapRouterAddress,
-    addresses.Vault
-  );
+  ]);
+  await priceProxy.deployed();
 
-  await indexSwap.deployed();
+  const IndexSwapLibrary = await ethers.getContractFactory("IndexSwapLibrary");
+  const libraryProxy = await upgrades.deployProxy(IndexSwapLibrary, [
+    priceProxy.address,
+    addresses.WETH_Address,
+  ]);
+  await libraryProxy.deployed();
 
-  console.log("indexSwap deployed to:", indexSwap.address);
+  const AccessController = await ethers.getContractFactory("AccessController");
+  const accessProxy = await upgrades.deployProxy(AccessController);
+  await accessProxy.deployed();
 
-  //initialize index based on network
-  await indexSwap.initialize(
-    [addresses.ETH_Address, addresses.BTC_Address],
-    [1, 1]
-  );
+  const IndexManager = await ethers.getContractFactory("IndexManager");
+  const managerProxy = await upgrades.deployProxy(IndexManager, [
+    accessProxy.address,
+    addresses.PancakeSwapRouterAddress,
+  ]);
+  await managerProxy.deployed();
 
-  console.log(
-    `You did it! View your tx here: ${ETHERSCAN_TX_URL}${priceOracle.deployTransaction.hash}`
-  );
+  const IndexSwap = await ethers.getContractFactory("IndexSwap");
+  const indexProxy = await upgrades.deployProxy(IndexSwap, [
+    "INDEXLY",
+    "IDX",
+    addresses.WETH_Address,
+    addresses.Vault,
+    "500000000000000000000",
+    libraryProxy.address,
+    managerProxy.address,
+    accessProxy.address,
+  ]);
+  await indexProxy.deployed();
+
+  const Rebalancing = await ethers.getContractFactory("Rebalancing");
+  const rebalanceProxy = await upgrades.deployProxy(Rebalancing, [
+    libraryProxy.address,
+    managerProxy.address,
+    accessProxy.address,
+  ]);
+
+  const priceOracle = PriceOracle.attach(priceProxy.address);
+  console.log(`IndexSwap deployed to: ${indexProxy.address}`);
 }
 
 // We recommend this pattern to be able to use async/await everywhere

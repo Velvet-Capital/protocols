@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4 || ^0.7.6 || ^0.8.0;
 
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
 import "../core/IndexSwapLibrary.sol";
@@ -9,7 +9,7 @@ import "../core/IndexManager.sol";
 import "../core/IndexSwap.sol";
 import "../access/AccessController.sol";
 
-contract Rebalancing is ReentrancyGuard {
+contract Rebalancing is ReentrancyGuardUpgradeable {
     bytes32 public constant ASSET_MANAGER_ROLE =
         keccak256("ASSET_MANAGER_ROLE");
 
@@ -20,11 +20,11 @@ contract Rebalancing is ReentrancyGuard {
 
     using SafeMath for uint256;
 
-    constructor(
+    function initialize(
         IndexSwapLibrary _indexSwapLibrary,
         IndexManager _indexManager,
         AccessController _accessController
-    ) {
+    ) public initializer {
         indexSwapLibrary = _indexSwapLibrary;
         indexManager = _indexManager;
         accessController = _accessController;

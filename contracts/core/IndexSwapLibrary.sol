@@ -16,7 +16,7 @@ contract IndexSwapLibrary {
     bytes32 public constant ASSET_MANAGER_ROLE =
         keccak256("ASSET_MANAGER_ROLE");
 
-    constructor(address _oracle, address _weth) {
+    function initialize(address _oracle, address _weth) external {
         oracle = IPriceOracle(_oracle);
         wETH = _weth;
     }

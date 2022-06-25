@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4 || ^0.7.6 || ^0.8.0;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20BurnableUpgradeable.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
 import "../interfaces/IWETH.sol";
@@ -14,10 +15,25 @@ import "./IndexSwapLibrary.sol";
 import "./IndexManager.sol";
 import "../access/AccessController.sol";
 
-contract TokenBase is ERC20, ERC20Burnable, Ownable, ReentrancyGuard {
-    constructor(string memory _name, string memory _symbol)
-        ERC20(_name, _symbol)
-    {}
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+
+contract TokenBase is
+    Initializable,
+    ERC20BurnableUpgradeable,
+    OwnableUpgradeable,
+    ReentrancyGuardUpgradeable
+{
+    function __TokenBase_init(string memory _name, string memory _symbol)
+        internal
+        initializer
+    {
+        __ERC20_init(_name, _symbol);
+        __ERC20Burnable_init();
+        __Ownable_init();
+        __ReentrancyGuard_init();
+    }
 }
 
 contract IndexSwap is TokenBase {
@@ -65,7 +81,7 @@ contract IndexSwap is TokenBase {
     bytes32 public constant INDEX_MANAGER_ROLE =
         keccak256("INDEX_MANAGER_ROLE");
 
-    constructor(
+    function initialize(
         string memory _name,
         string memory _symbol,
         address _outAsset,
@@ -74,7 +90,9 @@ contract IndexSwap is TokenBase {
         IndexSwapLibrary _indexSwapLibrary,
         IndexManager _indexManager,
         AccessController _accessController
-    ) TokenBase(_name, _symbol) {
+    ) public {
+        __TokenBase_init(_name, _symbol);
+
         vault = _vault;
         outAsset = _outAsset; //As now we are tacking busd
         MAX_INVESTMENTAMOUNT = _maxInvestmentAmount;
@@ -95,7 +113,7 @@ contract IndexSwap is TokenBase {
      * @param tokens Underlying tokens to initialize the pool with
      * @param denorms Initial denormalized weights for the tokens
      */
-    function initialize(address[] calldata tokens, uint96[] calldata denorms)
+    function init(address[] calldata tokens, uint96[] calldata denorms)
         external
         onlyOwner
     {
@@ -144,6 +162,7 @@ contract IndexSwap is TokenBase {
      */
     function investInFund() public payable nonReentrant {
         uint256 tokenAmount = msg.value;
+        require(_tokens.length != 0, "NOT INITIALIZED");
         require(
             tokenAmount <= MAX_INVESTMENTAMOUNT,
             "Amount exceeds maximum investment amount!"

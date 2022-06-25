@@ -13,8 +13,10 @@ contract IndexManager {
     IUniswapV2Router02 public pancakeSwapRouter;
     AccessController public accessController;
 
-    constructor(AccessController _accessController, address _pancakeSwapAddress)
-    {
+    function initialize(
+        AccessController _accessController,
+        address _pancakeSwapAddress
+    ) public {
         pancakeSwapRouter = IUniswapV2Router02(_pancakeSwapAddress);
         accessController = _accessController;
     }

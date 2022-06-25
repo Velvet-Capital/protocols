@@ -75,49 +75,21 @@ describe.skip("Tests for IndexFactory", () => {
     before(async () => {
       accounts = await ethers.getSigners();
       [owner, investor1, nonOwner, vault, addr1, addr2, ...addrs] = accounts;
-      const PriceOracle = await ethers.getContractFactory("PriceOracle");
-      priceOracle = await PriceOracle.deploy();
-
-      await priceOracle.deployed();
-      await priceOracle.initialize(addresses.PancakeSwapRouterAddress);
 
       const IndexFactory = await ethers.getContractFactory("IndexFactory");
       indexFactory = await IndexFactory.deploy();
       await indexFactory.deployed();
-
-      const IndexSwapLibrary = await ethers.getContractFactory(
-        "IndexSwapLibrary"
-      );
-      indexSwapLibrary = await IndexSwapLibrary.deploy(
-        priceOracle.address,
-        addresses.WETH_Address
-      );
-      await indexSwapLibrary.deployed();
-
-      const AccessController = await ethers.getContractFactory(
-        "AccessController"
-      );
-      accessController = await AccessController.deploy();
-      await accessController.deployed();
-
-      const IndexManager = await ethers.getContractFactory("IndexManager");
-      indexManager = await IndexManager.deploy(
-        accessController.address,
-        addresses.PancakeSwapRouterAddress
-      );
-      await indexManager.deployed();
 
       let indexAddress = "";
 
       const index = await indexFactory.createIndex(
         "INDEXLY",
         "IDX",
+        addresses.PancakeSwapRouterAddress,
         addresses.WETH_Address,
         vault.address,
         "500000000000000000000",
-        indexSwapLibrary.address,
-        indexManager.address,
-        accessController.address
+        addresses.IndexSwapLibrary
       );
 
       const result = index.to;
@@ -129,7 +101,8 @@ describe.skip("Tests for IndexFactory", () => {
       indexSwap = await IndexSwap.attach(indexAddress);
 
       const Rebalancing = await ethers.getContractFactory("Rebalancing");
-      rebalancing = await Rebalancing.deploy(
+      rebalancing = await Rebalancing.deploy();
+      rebalancing.initialize(
         indexSwapLibrary.address,
         indexManager.address,
         accessController.address
@@ -153,8 +126,6 @@ describe.skip("Tests for IndexFactory", () => {
         .approve(indexManager.address, approve_amount);
 
       console.log("indexSwap deployed to:", indexSwap.address);
-
-      console.log("indexSwap deployed to:", indexSwap.address);
     });
 
     describe("IndexFactory Contract", function () {
@@ -164,12 +135,11 @@ describe.skip("Tests for IndexFactory", () => {
         const index = await indexFactory.createIndex(
           "INDEXLY",
           "IDX",
+          addresses.PancakeSwapRouterAddress,
           addresses.WETH_Address,
           vault.address,
           "500000000000000000000",
-          indexSwapLibrary.address,
-          indexManager.address,
-          accessController.address
+          addresses.IndexSwapLibrary
         );
 
         console.log("index return from factory", index);
@@ -190,7 +160,7 @@ describe.skip("Tests for IndexFactory", () => {
       it("Initialize IndexFund Tokens", async () => {
         await indexSwap
           .connect(owner)
-          .initialize([busdInstance.address, ethInstance.address], [1, 1]);
+          .init([busdInstance.address, ethInstance.address], [1, 1]);
       });
 
       it("Invest 0.1BNB into Top10 fund", async () => {
