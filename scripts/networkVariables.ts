@@ -24,6 +24,7 @@ export const BSCTestNet: ChainAddresses = {
   RpcUrl: `https://data-seed-prebsc-2-s3.binance.org:8545/`,
   PancakeSwapRouterAddress: "0x9Ac64Cc6e4415144C455BD8E4837Fea55603e5c3",
   Vault: "0x07C0737fdc21adf93200bd625cc70a66B835Cf8b",
+  Module: "0x0000000000000000000000000000000000000000",
   ETH_Address: "0x8BaBbB98678facC7342735486C851ABD7A0d17Ca",
   DAI_Address: "0x8a9424745056Eb399FD19a0EC26A14316684e274",
   PancakeSwapV2RouterAddress: "0xCDe540d7eAFE93aC5fE6233Bee57E1270D3E330F",

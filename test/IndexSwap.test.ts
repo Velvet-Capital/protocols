@@ -85,10 +85,12 @@ describe.only("Tests for IndexSwap", () => {
       tokenMetadata = await TokenMetadata.deploy();
       await tokenMetadata.deployed();
 
-      tokenMetadata.add(
-        ethInstance.address,
-        "0xf508fCD89b8bd15579dc79A6827cB4686A3592c8"
-      );
+      if (chainId == "56") {
+        tokenMetadata.add(
+          ethInstance.address,
+          "0xf508fCD89b8bd15579dc79A6827cB4686A3592c8"
+        );
+      }
 
       const IndexSwapLibrary = await ethers.getContractFactory(
         "IndexSwapLibrary"
@@ -114,7 +116,6 @@ describe.only("Tests for IndexSwap", () => {
         addresses.Module,
         tokenMetadata.address
       );
-
       await indexManager.deployed();
 
       const IndexSwap = await ethers.getContractFactory("IndexSwap");
@@ -142,9 +143,27 @@ describe.only("Tests for IndexSwap", () => {
       await rebalanceProxy.deployed();
       rebalancing = Rebalancing.attach(rebalanceProxy.address);
 
-      const MyModule = ethers.getContractFactory("MyModule");
-      let myModule = (await MyModule).attach(addresses.Module);
-      await myModule.addOwner(indexManager.address);
+      if (addresses.Module != "0x0000000000000000000000000000000000000000") {
+        const MyModule = ethers.getContractFactory("MyModule");
+        let myModule = (await MyModule).attach(addresses.Module);
+        await myModule.addOwner(indexManager.address);
+      }
+
+      await busdInstance
+        .connect(vault)
+        .approve(indexManager.address, approve_amount);
+      await wbnbInstance
+        .connect(vault)
+        .approve(indexManager.address, approve_amount);
+      await daiInstance
+        .connect(vault)
+        .approve(indexManager.address, approve_amount);
+      await ethInstance
+        .connect(vault)
+        .approve(indexManager.address, approve_amount);
+      await btcInstance
+        .connect(vault)
+        .approve(indexManager.address, approve_amount);
 
       console.log("indexSwap deployed to:", indexSwap.address);
     });
