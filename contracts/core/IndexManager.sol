@@ -86,17 +86,25 @@ contract IndexManager {
                 IWETH(t).transfer(to, swapAmount);
             }
         } else {
-            swapResult = pancakeSwapRouter.swapExactETHForTokens{
-                value: swapAmount
-            }(
-                0,
-                getPathForETH(t),
-                to,
-                block.timestamp // using 'now' for convenience, for mainnet pass deadline from frontend!
-            )[1];
-
             if (tokenMetadata.vTokens(t) != address(0)) {
+                swapResult = pancakeSwapRouter.swapExactETHForTokens{
+                    value: swapAmount
+                }(
+                    0,
+                    getPathForETH(t),
+                    address(this),
+                    block.timestamp // using 'now' for convenience, for mainnet pass deadline from frontend!
+                )[1];
                 lendToken(t, tokenMetadata.vTokens(t), swapResult, to);
+            } else {
+                swapResult = pancakeSwapRouter.swapExactETHForTokens{
+                    value: swapAmount
+                }(
+                    0,
+                    getPathForETH(t),
+                    to,
+                    block.timestamp // using 'now' for convenience, for mainnet pass deadline from frontend!
+                )[1];
             }
         }
     }

@@ -11,6 +11,8 @@ import "../venus/IVBNB.sol";
 import "../venus/TokenMetadata.sol";
 
 contract IndexSwapLibrary {
+    event TokenBalanceUpdated(uint256[] tokenBalances, uint256 vaultValue);
+
     IPriceOracle oracle;
     address wETH;
     TokenMetadata public tokenMetadata;
@@ -96,8 +98,10 @@ contract IndexSwapLibrary {
 
                 require(vaultBalance > 0, "sum price is not greater than 0");
             }
+            emit TokenBalanceUpdated(tokenBalanceInBNB, vaultBalance);
             return (tokenBalanceInBNB, vaultBalance);
         } else {
+            emit TokenBalanceUpdated(new uint256[](0), 0);
             return (new uint256[](0), 0);
         }
     }
