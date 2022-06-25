@@ -50,18 +50,27 @@ contract IndexManager {
      * @notice Transfer tokens from vault to a specific address
      */
     function _pullFromVault(
+        IndexSwap _index,
         address t,
         uint256 amount,
         address to
     ) public onlyIndexManager {
         if (tokenMetadata.vTokens(t) != address(0)) {
-            gnosisSafe.executeTransactionOther(
-                to,
-                amount,
-                tokenMetadata.vTokens(t)
-            );
+            if (address(gnosisSafe) != address(0)) {
+                gnosisSafe.executeTransactionOther(
+                    to,
+                    amount,
+                    tokenMetadata.vTokens(t)
+                );
+            } else {
+                TransferHelper.safeTransferFrom(t, _index.vault(), to, amount);
+            }
         } else {
-            gnosisSafe.executeTransactionOther(to, amount, t);
+            if (address(gnosisSafe) != address(0)) {
+                gnosisSafe.executeTransactionOther(to, amount, t);
+            } else {
+                TransferHelper.safeTransferFrom(t, _index.vault(), to, amount);
+            }
         }
     }
 
