@@ -64,7 +64,8 @@ contract IndexFactory {
         rebalancing.initialize(
             _indexSwapLibrary,
             _indexManager,
-            _accessController
+            _accessController,
+            _tokenMetadata
         );
 
         emit IndexCreation(
