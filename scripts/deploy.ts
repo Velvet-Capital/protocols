@@ -64,6 +64,7 @@ async function main() {
   console.log(`IndexManager deployed to: ${managerProxy.address}`);
   console.log(`IndexSwap deployed to: ${indexProxy.address}`);
   console.log(`Rebalancing deployed to: ${rebalanceProxy.address}`);
+
 }
 
 // We recommend this pattern to be able to use async/await everywhere
