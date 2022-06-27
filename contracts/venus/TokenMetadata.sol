@@ -6,6 +6,7 @@ contract TokenMetadata {
 
     function add(address _underlying, address _vToken) public {
         // TODO check if _vToken is a valid vToken
+        require(vTokens[_underlying] != _vToken, "Pair already exists!");
         vTokens[_underlying] = _vToken;
     }
 }
