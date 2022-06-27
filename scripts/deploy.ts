@@ -4,6 +4,7 @@
 // When running the script with `hardhat run <script>` you'll find the Hardhat
 // Runtime Environment's members available in the global scope.
 import { run, ethers, upgrades } from "hardhat";
+import { TokenMetadata } from "../typechain";
 import { chainIdToAddresses } from "./networkVariables";
 // let fs = require("fs");
 const ETHERSCAN_TX_URL = "https://testnet.bscscan.io/tx/";
@@ -20,6 +21,10 @@ async function main() {
   const { chainId } = await ethers.provider.getNetwork();
   const addresses = chainIdToAddresses[chainId];
 
+  const TokenMetadata = await ethers.getContractFactory("TokenMetadata");
+  const tokenMetadata = await TokenMetadata.deploy();
+  await tokenMetadata.deployed();
+
   // We get the contract to deploy
   const AccessController = await ethers.getContractFactory("AccessController");
   const accessProxy = await upgrades.deployProxy(AccessController);
@@ -29,7 +34,8 @@ async function main() {
   const managerProxy = await IndexManager.deploy(
     accessProxy.address,
     addresses.PancakeSwapRouterAddress,
-    addresses.Module
+    addresses.Module,
+    tokenMetadata.address
   );
   await managerProxy.deployed();
 
@@ -51,6 +57,7 @@ async function main() {
     addresses.IndexSwapLibrary,
     managerProxy.address,
     accessProxy.address,
+    tokenMetadata.address,
   ]);
   await rebalanceProxy.deployed();
 
