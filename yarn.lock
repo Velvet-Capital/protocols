@@ -660,6 +660,31 @@
     "@ethersproject/properties" "^5.6.0"
     "@ethersproject/strings" "^5.6.1"
 
+"@gnosis.pm/mock-contract@^4.0.0":
+  "integrity" "sha512-SkRq2KwPx6vo0LAjSc8JhgQstrQFXRyn2yqquIfub7r2WHi5nUbF8beeSSXsd36hvBcQxQfmOIYNYRpj9JOhrQ=="
+  "resolved" "https://registry.npmjs.org/@gnosis.pm/mock-contract/-/mock-contract-4.0.0.tgz"
+  "version" "4.0.0"
+
+"@gnosis.pm/safe-contracts@1.3.0":
+  "integrity" "sha512-1p+1HwGvxGUVzVkFjNzglwHrLNA67U/axP0Ct85FzzH8yhGJb4t9jDjPYocVMzLorDoWAfKicGy1akPY9jXRVw=="
+  "resolved" "https://registry.npmjs.org/@gnosis.pm/safe-contracts/-/safe-contracts-1.3.0.tgz"
+  "version" "1.3.0"
+
+"@gnosis.pm/zodiac@^1.0.11":
+  "integrity" "sha512-J24TtMRS/5fEhFJE6BDLQu3Jjcm3u6k9KBtUSix7aidwWZzZ671RUzu+DxxZNlzA1/iuoG1uWlDCEWmxElbCEA=="
+  "resolved" "https://registry.npmjs.org/@gnosis.pm/zodiac/-/zodiac-1.0.11.tgz"
+  "version" "1.0.11"
+  dependencies:
+    "@gnosis.pm/mock-contract" "^4.0.0"
+    "@gnosis.pm/safe-contracts" "1.3.0"
+    "@openzeppelin/contracts" "^4.3.2"
+    "@openzeppelin/contracts-upgradeable" "^4.2.0"
+    "argv" "^0.0.2"
+    "dotenv" "^8.0.0"
+    "ethers" "^5.4.6"
+    "solc" "^0.8.6"
+    "yargs" "^16.1.1"
+
 "@ledgerhq/cryptoassets@^5.27.2":
   "integrity" "sha512-M3ibc3LRuHid5UtL7FI3IC6nMEppvly98QHFoSa7lJU0HDzQxY6zHec/SPM4uuJUC8sXoGVAiRJDkgny54damw=="
   "resolved" "https://registry.npmjs.org/@ledgerhq/cryptoassets/-/cryptoassets-5.53.0.tgz"
@@ -819,12 +844,12 @@
     "@types/sinon-chai" "^3.2.3"
     "@types/web3" "1.0.19"
 
-"@openzeppelin/contracts-upgradeable@^4.3.2":
+"@openzeppelin/contracts-upgradeable@^4.2.0", "@openzeppelin/contracts-upgradeable@^4.3.2":
   "integrity" "sha512-5OnVuO4HlkjSCJO165a4i2Pu1zQGzMs//o54LPrwUgxvEO2P3ax1QuaSI0cEHHTveA77guS0PnNugpR2JMsPfA=="
   "resolved" "https://registry.npmjs.org/@openzeppelin/contracts-upgradeable/-/contracts-upgradeable-4.6.0.tgz"
   "version" "4.6.0"
 
-"@openzeppelin/contracts@^4.4.2":
+"@openzeppelin/contracts@^4.3.2", "@openzeppelin/contracts@^4.4.2":
   "integrity" "sha512-8vi4d50NNya/bQqCmaVzvHNmwHvS0OBKb7HNtuNwEE3scXWrP31fKQoGxNMT+KbzmrNZzatE3QK5p2gFONI/hg=="
   "resolved" "https://registry.npmjs.org/@openzeppelin/contracts/-/contracts-4.6.0.tgz"
   "version" "4.6.0"
@@ -1723,6 +1748,11 @@
   "integrity" "sha512-8+9WqebbFzpX9OR+Wa6O29asIogeRMzcGtAINdpMHHyAg10f05aSFVBbcEqGf/PXw1EjAZ+q2/bEBg3DvurK3Q=="
   "resolved" "https://registry.npmjs.org/argparse/-/argparse-2.0.1.tgz"
   "version" "2.0.1"
+
+"argv@^0.0.2":
+  "integrity" "sha512-dEamhpPEwRUBpLNHeuCm/v+g0anFByHahxodVO/BbAarHVBBg2MccCwf9K+o1Pof+2btdnkJelYVUWjW/VrATw=="
+  "resolved" "https://registry.npmjs.org/argv/-/argv-0.0.2.tgz"
+  "version" "0.0.2"
 
 "arr-diff@^4.0.0":
   "integrity" "sha1-1kYQdP6/7HHn4VI1dhoyml3HxSA="
@@ -2887,6 +2917,11 @@
   dependencies:
     "nofilter" "^3.1.0"
 
+"chai-bignumber@^3.0.0":
+  "integrity" "sha512-SubOtaSI2AILWTWe2j0c6i2yFT/f9J6UBjeVGDuwDiPLkF/U5+/eTWUE3sbCZ1KgcPF6UJsDVYbIxaYA097MQA=="
+  "resolved" "https://registry.npmjs.org/chai-bignumber/-/chai-bignumber-3.0.0.tgz"
+  "version" "3.0.0"
+
 "chai@^4.3.4":
   "integrity" "sha512-bbcp3YfHCUzMOvKqsztczerVgBKSsEijCySNlHHbX3VG1nskvqjz5Rfso1gGwD6w6oOV3eI60pKuMOV5MV7p3Q=="
   "resolved" "https://registry.npmjs.org/chai/-/chai-4.3.6.tgz"
@@ -3190,7 +3225,7 @@
   "resolved" "https://registry.npmjs.org/commander/-/commander-2.20.3.tgz"
   "version" "2.20.3"
 
-"commander@^8.3.0":
+"commander@^8.1.0", "commander@^8.3.0":
   "integrity" "sha512-OkTL9umf+He2DZkUq8f8J9of7yL6RJKI24dVITBmNfZBmri9zYZQrKkuXiKhyfPSu8tUhnVBB1iKXevvnlR4Ww=="
   "resolved" "https://registry.npmjs.org/commander/-/commander-8.3.0.tgz"
   "version" "8.3.0"
@@ -3818,6 +3853,11 @@
   "integrity" "sha512-rlBi9d8jpv9Sf1klPjNfFAuWDjKLwTIJJ/VxtoTwIR6hnZxcEOQCZg2oIL3MWBYw5GpUDKOEnND7LXTbIpQ03Q=="
   "resolved" "https://registry.npmjs.org/dotenv/-/dotenv-10.0.0.tgz"
   "version" "10.0.0"
+
+"dotenv@^8.0.0":
+  "integrity" "sha512-IrPdXQsk2BbzvCBGBOTmmSH5SodmqZNt4ERAZDmW4CT+tL8VtvinqywuANaFu4bOMWki16nqf0e4oC0QIaDr/g=="
+  "resolved" "https://registry.npmjs.org/dotenv/-/dotenv-8.6.0.tgz"
+  "version" "8.6.0"
 
 "dotignore@~0.1.2":
   "integrity" "sha512-UGGGWfSauusaVJC+8fgV+NVvBXkCTmVv7sk6nojDZZvuOUNGUy0Zk4UpHQD6EDjS0jpBwcACvH4eofvyzBcRDw=="
@@ -4708,7 +4748,7 @@
     "uuid" "2.0.1"
     "xmlhttprequest" "1.8.0"
 
-"ethers@^5.0.0", "ethers@^5.0.1", "ethers@^5.0.2", "ethers@^5.1.3", "ethers@^5.5.2", "ethers@^5.6.0", "ethers@^5.6.9":
+"ethers@^5.0.0", "ethers@^5.0.1", "ethers@^5.0.2", "ethers@^5.1.3", "ethers@^5.1.4", "ethers@^5.4.6", "ethers@^5.5.2", "ethers@^5.6.0", "ethers@^5.6.9":
   "integrity" "sha512-lMGC2zv9HC5EC+8r429WaWu3uWJUCgUCt8xxKCFqkrFuBDZXDYIdzDUECxzjf2BMF8IVBByY1EBoGSL3RTm8RA=="
   "resolved" "https://registry.npmjs.org/ethers/-/ethers-5.6.9.tgz"
   "version" "5.6.9"
@@ -9593,6 +9633,19 @@
     "semver" "^5.5.0"
     "tmp" "0.0.33"
 
+"solc@^0.8.6":
+  "integrity" "sha512-Riv0GNHNk/SddN/JyEuFKwbcWcEeho15iyupTSHw5Np6WuXA5D8kEHbyzDHi6sqmvLzu2l+8b1YmL8Ytple+8w=="
+  "resolved" "https://registry.npmjs.org/solc/-/solc-0.8.15.tgz"
+  "version" "0.8.15"
+  dependencies:
+    "command-exists" "^1.2.8"
+    "commander" "^8.1.0"
+    "follow-redirects" "^1.12.1"
+    "js-sha3" "0.8.0"
+    "memorystream" "^0.3.1"
+    "semver" "^5.5.0"
+    "tmp" "0.0.33"
+
 "solc@0.7.3":
   "integrity" "sha512-GAsWNAjGzIDg7VxzP6mPjdurby3IkGCjQcM8GFYZT6RyaoUZKmMU6Y7YwG+tFGhv7dwZ8rmR4iwFDrrD99JwqA=="
   "resolved" "https://registry.npmjs.org/solc/-/solc-0.7.3.tgz"
@@ -11745,6 +11798,19 @@
     "y18n" "^4.0.0"
     "yargs-parser" "^13.1.2"
 
+"yargs@^16.1.1", "yargs@16.2.0":
+  "integrity" "sha512-D1mvvtDG0L5ft/jGWkLpG1+m0eQxOfaBvTNELraWj22wSVUMWxZUvYgJYcKh6jGGIkJFhH4IZPQhR4TKpc8mBw=="
+  "resolved" "https://registry.npmjs.org/yargs/-/yargs-16.2.0.tgz"
+  "version" "16.2.0"
+  dependencies:
+    "cliui" "^7.0.2"
+    "escalade" "^3.1.1"
+    "get-caller-file" "^2.0.5"
+    "require-directory" "^2.1.1"
+    "string-width" "^4.2.0"
+    "y18n" "^5.0.5"
+    "yargs-parser" "^20.2.2"
+
 "yargs@^4.7.1":
   "integrity" "sha1-wMQpJMpKqmsObaFznfshZDn53cA="
   "resolved" "https://registry.npmjs.org/yargs/-/yargs-4.8.1.tgz"
@@ -11764,19 +11830,6 @@
     "window-size" "^0.2.0"
     "y18n" "^3.2.1"
     "yargs-parser" "^2.4.1"
-
-"yargs@16.2.0":
-  "integrity" "sha512-D1mvvtDG0L5ft/jGWkLpG1+m0eQxOfaBvTNELraWj22wSVUMWxZUvYgJYcKh6jGGIkJFhH4IZPQhR4TKpc8mBw=="
-  "resolved" "https://registry.npmjs.org/yargs/-/yargs-16.2.0.tgz"
-  "version" "16.2.0"
-  dependencies:
-    "cliui" "^7.0.2"
-    "escalade" "^3.1.1"
-    "get-caller-file" "^2.0.5"
-    "require-directory" "^2.1.1"
-    "string-width" "^4.2.0"
-    "y18n" "^5.0.5"
-    "yargs-parser" "^20.2.2"
 
 "yn@3.1.1":
   "integrity" "sha512-Ux4ygGWsu2c7isFWe8Yu1YluJmqVhxqK2cLXNQA5AcC3QfbGNpM7fu0Y8b/z16pXLnFxZYvWhd3fhBY9DLmC6Q=="

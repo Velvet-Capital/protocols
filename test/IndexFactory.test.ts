@@ -1,6 +1,6 @@
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
-import { ethers } from "hardhat";
+import { ethers, upgrades } from "hardhat";
 import {
   IndexSwap,
   PriceOracle,
@@ -10,6 +10,7 @@ import {
   IndexManager,
   AccessController,
   Rebalancing,
+  TokenMetadata,
 } from "../typechain";
 import { chainIdToAddresses } from "../scripts/networkVariables";
 
@@ -25,6 +26,7 @@ describe.skip("Tests for IndexFactory", () => {
   let indexManager: IndexManager;
   let rebalancing: Rebalancing;
   let accessController: AccessController;
+  let tokenMetadata: TokenMetadata;
   let txObject;
   let owner: SignerWithAddress;
   let nonOwner: SignerWithAddress;
@@ -38,7 +40,7 @@ describe.skip("Tests for IndexFactory", () => {
   let token;
   const forkChainId: any = process.env.FORK_CHAINID;
   const provider = ethers.provider;
-  const chainId: any = forkChainId ? forkChainId : 97;
+  const chainId: any = forkChainId ? forkChainId : 56;
   const addresses = chainIdToAddresses[chainId];
   var bnbBefore = 0;
   var bnbAfter = 0;
@@ -76,6 +78,51 @@ describe.skip("Tests for IndexFactory", () => {
       accounts = await ethers.getSigners();
       [owner, investor1, nonOwner, vault, addr1, addr2, ...addrs] = accounts;
 
+      const PriceOracle = await ethers.getContractFactory("PriceOracle");
+
+      const priceProxy = await upgrades.deployProxy(PriceOracle, [
+        addresses.PancakeSwapRouterAddress,
+      ]);
+      await priceProxy.deployed();
+      priceOracle = PriceOracle.attach(priceProxy.address);
+
+      const TokenMetadata = await ethers.getContractFactory("TokenMetadata");
+      tokenMetadata = await TokenMetadata.deploy();
+      await tokenMetadata.deployed();
+
+      if (chainId == "56") {
+        tokenMetadata.add(
+          ethInstance.address,
+          "0xf508fCD89b8bd15579dc79A6827cB4686A3592c8"
+        );
+      }
+
+      const IndexSwapLibrary = await ethers.getContractFactory(
+        "IndexSwapLibrary"
+      );
+      const libraryProxy = await upgrades.deployProxy(IndexSwapLibrary, [
+        priceOracle.address,
+        addresses.WETH_Address,
+        tokenMetadata.address,
+      ]);
+      await libraryProxy.deployed();
+      indexSwapLibrary = IndexSwapLibrary.attach(libraryProxy.address);
+
+      const AccessController = await ethers.getContractFactory(
+        "AccessController"
+      );
+      const accessController = await AccessController.deploy();
+      await accessController.deployed();
+
+      const IndexManager = await ethers.getContractFactory("IndexManager");
+      const indexManager = await IndexManager.deploy(
+        accessController.address,
+        addresses.PancakeSwapRouterAddress,
+        addresses.Module,
+        tokenMetadata.address
+      );
+      await indexManager.deployed();
+
       const IndexFactory = await ethers.getContractFactory("IndexFactory");
       indexFactory = await IndexFactory.deploy();
       await indexFactory.deployed();
@@ -87,10 +134,13 @@ describe.skip("Tests for IndexFactory", () => {
         "IDX",
         addresses.PancakeSwapRouterAddress,
         addresses.WETH_Address,
-        vault.address,
+        addresses.Vault,
+        addresses.Module,
         "500000000000000000000",
-        addresses.IndexSwapLibrary
+        indexSwapLibrary.address,
+        tokenMetadata.address
       );
+      index.wait();
 
       const result = index.to;
       if (result) {
@@ -105,25 +155,14 @@ describe.skip("Tests for IndexFactory", () => {
       rebalancing.initialize(
         indexSwapLibrary.address,
         indexManager.address,
-        accessController.address
+        accessController.address,
+        tokenMetadata.address
       );
       await rebalancing.deployed();
 
-      await busdInstance
-        .connect(vault)
-        .approve(indexManager.address, approve_amount);
-      await wbnbInstance
-        .connect(vault)
-        .approve(indexManager.address, approve_amount);
-      await daiInstance
-        .connect(vault)
-        .approve(indexManager.address, approve_amount);
-      await ethInstance
-        .connect(vault)
-        .approve(indexManager.address, approve_amount);
-      await btcInstance
-        .connect(vault)
-        .approve(indexManager.address, approve_amount);
+      const MyModule = ethers.getContractFactory("MyModule");
+      let myModule = (await MyModule).attach(addresses.Module);
+      await myModule.addOwner(indexManager.address);
 
       console.log("indexSwap deployed to:", indexSwap.address);
     });
@@ -137,9 +176,11 @@ describe.skip("Tests for IndexFactory", () => {
           "IDX",
           addresses.PancakeSwapRouterAddress,
           addresses.WETH_Address,
-          vault.address,
+          addresses.Vault,
+          addresses.Module,
           "500000000000000000000",
-          addresses.IndexSwapLibrary
+          addresses.IndexSwapLibrary,
+          tokenMetadata.address
         );
 
         console.log("index return from factory", index);
@@ -165,42 +206,108 @@ describe.skip("Tests for IndexFactory", () => {
 
       it("Invest 0.1BNB into Top10 fund", async () => {
         const indexSupplyBefore = await indexSwap.totalSupply();
-
+        //console.log("0.1bnb before", indexSupplyBefore);
         await indexSwap.investInFund({
-          value: ethers.utils.parseEther("0.1"),
+          value: "100000000000000000",
         });
         const indexSupplyAfter = await indexSwap.totalSupply();
+        //console.log("0.1bnb after", indexSupplyAfter);
+
         const valuesAfter = await indexSwapLibrary.getTokenAndVaultBalance(
           indexSwap.address
         );
-        const balancesAfter = valuesAfter[0];
-        bnbBefore = Number(balancesAfter[1]);
+        const receipt = await valuesAfter.wait();
 
-        expect(Number(indexSupplyAfter)).to.be.gt(Number(indexSupplyBefore));
+        let vaultBalance;
+        let tokenBalances;
+
+        if (
+          receipt.events &&
+          receipt.events[0] &&
+          receipt.events[0].args &&
+          receipt.events[0].args.tokenBalances
+        ) {
+          tokenBalances = receipt.events[0].args.tokenBalances;
+          vaultBalance = receipt.events[0].args.vaultValue;
+        }
+
+        if (
+          receipt.events &&
+          receipt.events[1] &&
+          receipt.events[1].args &&
+          receipt.events[1].args.tokenBalances
+        ) {
+          tokenBalances = receipt.events[1].args.tokenBalances;
+          vaultBalance = receipt.events[1].args.vaultValue;
+        }
+
+        bnbBefore = Number(vaultBalance);
+
+        expect(Number(indexSupplyAfter)).to.be.greaterThanOrEqual(
+          Number(indexSupplyBefore)
+        );
       });
 
-      it("Invest 0.2BNB into Top10 fund", async () => {
+      it("Invest 2BNB into Top10 fund", async () => {
         const indexSupplyBefore = await indexSwap.totalSupply();
-
+        //console.log("0.2bnb before", indexSupplyBefore);
         await indexSwap.investInFund({
-          value: ethers.utils.parseEther("0.2"),
+          value: "2000000000000000000",
         });
         const indexSupplyAfter = await indexSwap.totalSupply();
+        //console.log("2bnb after", indexSupplyAfter);
+
         const valuesAfter = await indexSwapLibrary.getTokenAndVaultBalance(
           indexSwap.address
         );
-        const balancesAfter = valuesAfter[0];
-        bnbAfter = Number(balancesAfter[1]);
+        const receipt = await valuesAfter.wait();
 
-        expect(Number(indexSupplyAfter)).to.be.gt(Number(indexSupplyBefore));
+        let vaultBalance;
+        let tokenBalances;
+
+        if (
+          receipt.events &&
+          receipt.events[0] &&
+          receipt.events[0].args &&
+          receipt.events[0].args.tokenBalances
+        ) {
+          tokenBalances = receipt.events[0].args.tokenBalances;
+          vaultBalance = receipt.events[0].args.vaultValue;
+        }
+
+        if (
+          receipt.events &&
+          receipt.events[1] &&
+          receipt.events[1].args &&
+          receipt.events[1].args.tokenBalances
+        ) {
+          tokenBalances = receipt.events[1].args.tokenBalances;
+          vaultBalance = receipt.events[1].args.vaultValue;
+        }
+
+        bnbAfter = Number(vaultBalance);
+
+        expect(Number(indexSupplyAfter)).to.be.greaterThanOrEqual(
+          Number(indexSupplyBefore)
+        );
       });
 
       it("BNB amount increases after investing", async () => {
         expect(bnbAfter).to.be.gt(bnbBefore);
       });
 
-      it("should Rebalance", async () => {
-        await rebalancing.rebalance(indexSwap.address);
+      it("Invest 1BNB into Top10 fund", async () => {
+        const indexSupplyBefore = await indexSwap.totalSupply();
+        //console.log("0.1bnb before", indexSupplyBefore);
+        await indexSwap.investInFund({
+          value: "1000000000000000000",
+        });
+        const indexSupplyAfter = await indexSwap.totalSupply();
+        //console.log("1bnb after", indexSupplyAfter);
+
+        expect(Number(indexSupplyAfter)).to.be.greaterThanOrEqual(
+          Number(indexSupplyBefore)
+        );
       });
 
       it("should revert when Rebalance is called from an account which is not assigned as asset manager", async () => {
@@ -215,26 +322,63 @@ describe.skip("Tests for IndexFactory", () => {
         ).to.be.revertedWith("INVALID_WEIGHTS");
       });
       it("should Update Weights and Rebalance", async () => {
-        const {
-          tokenXBalance: beforeTokenXBalance,
-          vaultValue: beforeVaultValue,
-        } = await indexSwapLibrary.getTokenAndVaultBalance(indexSwap.address);
+        let beforeTokenXBalance;
+        let beforeVaultValue;
+
+        const values = await indexSwapLibrary.getTokenAndVaultBalance(
+          indexSwap.address
+        );
+        const receipt = await values.wait();
+
+        if (
+          receipt.events &&
+          receipt.events[0] &&
+          receipt.events[0].args &&
+          receipt.events[0].args.tokenBalances
+        ) {
+          beforeTokenXBalance = receipt.events[0].args.tokenBalances;
+          beforeVaultValue = receipt.events[0].args.vaultValue;
+        }
+
+        if (
+          receipt.events &&
+          receipt.events[1] &&
+          receipt.events[1].args &&
+          receipt.events[1].args.tokenBalances
+        ) {
+          beforeTokenXBalance = receipt.events[1].args.tokenBalances;
+          beforeVaultValue = receipt.events[1].args.vaultValue;
+        }
 
         await rebalancing.updateWeights(indexSwap.address, [3333, 6667]);
 
-        const {
-          tokenXBalance: afterTokenXBalance,
-          vaultValue: afterVaultValueBN,
-        } = await indexSwapLibrary.getTokenAndVaultBalance(indexSwap.address);
+        let afterTokenXBalance;
+        let afterVaultValueBNB;
 
-        // console.log({
-        //   beforeToken0Bal: ethers.utils.formatEther(beforeTokenXBalance[0]),
-        //   beforeToken1Bal: ethers.utils.formatEther(beforeTokenXBalance[1]),
-        //   beforeVaultValue: ethers.utils.formatEther(beforeVaultValue),
-        //   afterToken0Bal: ethers.utils.formatEther(afterTokenXBalance[0]),
-        //   afterToken1Bal: ethers.utils.formatEther(afterTokenXBalance[1]),
-        //   afterVaultValue: ethers.utils.formatEther(afterVaultValueBN),
-        // });
+        const valuesAfter = await indexSwapLibrary.getTokenAndVaultBalance(
+          indexSwap.address
+        );
+        const receiptAfter = await valuesAfter.wait();
+
+        if (
+          receiptAfter.events &&
+          receiptAfter.events[0] &&
+          receiptAfter.events[0].args &&
+          receiptAfter.events[0].args.tokenBalances
+        ) {
+          afterTokenXBalance = receiptAfter.events[0].args.tokenBalances;
+          afterVaultValueBNB = receiptAfter.events[0].args.vaultValue;
+        }
+
+        if (
+          receiptAfter.events &&
+          receiptAfter.events[1] &&
+          receiptAfter.events[1].args &&
+          receiptAfter.events[1].args.tokenBalances
+        ) {
+          afterTokenXBalance = receiptAfter.events[1].args.tokenBalances;
+          afterVaultValueBNB = receiptAfter.events[1].args.vaultValue;
+        }
 
         const afterToken0Bal = Number(
           ethers.utils.formatEther(afterTokenXBalance[0])
@@ -243,7 +387,7 @@ describe.skip("Tests for IndexFactory", () => {
           ethers.utils.formatEther(afterTokenXBalance[1])
         );
         const afterVaultValue = Number(
-          ethers.utils.formatEther(afterVaultValueBN)
+          ethers.utils.formatEther(afterVaultValueBNB)
         );
 
         expect(Math.ceil((afterToken0Bal * 10) / afterVaultValue)).to.be.gte(
@@ -263,14 +407,38 @@ describe.skip("Tests for IndexFactory", () => {
           )
         ).to.be.revertedWith("INVALID_WEIGHTS");
       });
+
       it("should update tokens", async () => {
         // current = BUSD:ETH = 1:2
         // target = ETH:DAI:WBNB = 1:3:1
 
-        const {
-          tokenXBalance: beforeTokenXBalance,
-          vaultValue: beforeVaultValue,
-        } = await indexSwapLibrary.getTokenAndVaultBalance(indexSwap.address);
+        let beforeTokenXBalance;
+        let beforeVaultValue;
+
+        const values = await indexSwapLibrary.getTokenAndVaultBalance(
+          indexSwap.address
+        );
+        const receipt = await values.wait();
+
+        if (
+          receipt.events &&
+          receipt.events[0] &&
+          receipt.events[0].args &&
+          receipt.events[0].args.tokenBalances
+        ) {
+          beforeTokenXBalance = receipt.events[0].args.tokenBalances;
+          beforeVaultValue = receipt.events[0].args.vaultValue;
+        }
+
+        if (
+          receipt.events &&
+          receipt.events[2] &&
+          receipt.events[2].args &&
+          receipt.events[2].args.tokenBalances
+        ) {
+          beforeTokenXBalance = receipt.events[2].args.tokenBalances;
+          beforeVaultValue = receipt.events[2].args.vaultValue;
+        }
 
         await rebalancing.updateTokens(
           indexSwap.address,
@@ -278,20 +446,44 @@ describe.skip("Tests for IndexFactory", () => {
           [2000, 6000, 2000]
         );
 
-        const {
-          tokenXBalance: afterTokenXBalance,
-          vaultValue: afterVaultValueBN,
-        } = await indexSwapLibrary.getTokenAndVaultBalance(indexSwap.address);
+        let afterTokenXBalance;
+        let afterVaultValueBNB;
 
-        // console.log({
-        //   beforeBUSDBal: ethers.utils.formatEther(beforeTokenXBalance[0]),
-        //   beforeETHBal: ethers.utils.formatEther(beforeTokenXBalance[1]),
-        //   beforeVaultValue: ethers.utils.formatEther(beforeVaultValue),
-        //   afterETHBal: ethers.utils.formatEther(afterTokenXBalance[0]),
-        //   afterDAIBal: ethers.utils.formatEther(afterTokenXBalance[1]),
-        //   afterWBNBBal: ethers.utils.formatEther(afterTokenXBalance[2]),
-        //   afterVaultValue: ethers.utils.formatEther(afterVaultValue),
-        // });
+        const valuesAfter = await indexSwapLibrary.getTokenAndVaultBalance(
+          indexSwap.address
+        );
+        const receiptAfter = await valuesAfter.wait();
+
+        if (
+          receiptAfter.events &&
+          receiptAfter.events[0] &&
+          receiptAfter.events[0].args &&
+          receiptAfter.events[0].args.tokenBalances
+        ) {
+          afterTokenXBalance = receiptAfter.events[0].args.tokenBalances;
+          afterVaultValueBNB = receiptAfter.events[0].args.vaultValue;
+        }
+
+        if (
+          receiptAfter.events &&
+          receiptAfter.events[1] &&
+          receiptAfter.events[1].args &&
+          receiptAfter.events[1].args.tokenBalances
+        ) {
+          afterTokenXBalance = receiptAfter.events[1].args.tokenBalances;
+          afterVaultValueBNB = receiptAfter.events[1].args.vaultValue;
+        }
+
+        if (
+          receiptAfter.events &&
+          receiptAfter.events[2] &&
+          receiptAfter.events[2].args &&
+          receiptAfter.events[2].args.tokenBalances
+        ) {
+          afterTokenXBalance = receiptAfter.events[2].args.tokenBalances;
+          afterVaultValueBNB = receiptAfter.events[2].args.vaultValue;
+        }
+
         const afterETHBal = Number(
           ethers.utils.formatEther(afterTokenXBalance[0])
         );
@@ -302,7 +494,7 @@ describe.skip("Tests for IndexFactory", () => {
           ethers.utils.formatEther(afterTokenXBalance[2])
         );
         const afterVaultValue = Number(
-          ethers.utils.formatEther(afterVaultValueBN)
+          ethers.utils.formatEther(afterVaultValueBNB)
         );
 
         expect(Math.ceil((afterETHBal * 10) / afterVaultValue)).to.be.gte(

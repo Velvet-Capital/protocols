@@ -8,6 +8,9 @@ import "../core/IndexSwapLibrary.sol";
 import "../core/IndexManager.sol";
 import "../core/IndexSwap.sol";
 import "../access/AccessController.sol";
+import "../venus/IVBNB.sol";
+import "../venus/VBep20Interface.sol";
+import "../venus/TokenMetadata.sol";
 
 contract Rebalancing is ReentrancyGuardUpgradeable {
     bytes32 public constant ASSET_MANAGER_ROLE =
@@ -17,17 +20,20 @@ contract Rebalancing is ReentrancyGuardUpgradeable {
     IndexManager public indexManager;
 
     AccessController public accessController;
+    TokenMetadata public tokenMetadata;
 
     using SafeMath for uint256;
 
     function initialize(
         IndexSwapLibrary _indexSwapLibrary,
         IndexManager _indexManager,
-        AccessController _accessController
+        AccessController _accessController,
+        TokenMetadata _tokenMetadata
     ) public initializer {
         indexSwapLibrary = _indexSwapLibrary;
         indexManager = _indexManager;
         accessController = _accessController;
+        tokenMetadata = _tokenMetadata;
 
         // OpenZeppelin Access Control
         accessController.setupRole(keccak256("DEFAULT_ADMIN_ROLE"), msg.sender);
@@ -75,7 +81,26 @@ contract Rebalancing is ReentrancyGuardUpgradeable {
         for (uint256 i = 0; i < _index.getTokens().length; i++) {
             if (_newWeights[i] < _oldWeights[i]) {
                 address t = _index.getTokens()[i];
-                uint256 tokenBalance = IERC20(t).balanceOf(_index.vault());
+
+                uint256 tokenBalance;
+                if (
+                    tokenMetadata.vTokens(_index.getTokens()[i]) != address(0)
+                ) {
+                    if (_index.getTokens()[i] != indexManager.getETH()) {
+                        VBep20Interface token = VBep20Interface(
+                            tokenMetadata.vTokens(_index.getTokens()[i])
+                        );
+                        tokenBalance = token.balanceOf(_index.vault());
+                    } else {
+                        IVBNB token = IVBNB(
+                            tokenMetadata.vTokens(_index.getTokens()[i])
+                        );
+                        tokenBalance = token.balanceOf(_index.vault());
+                    }
+                } else {
+                    tokenBalance = IERC20(t).balanceOf(_index.vault());
+                }
+
                 uint256 weightDiff = _oldWeights[i].sub(_newWeights[i]);
                 uint256 swapAmount = tokenBalance.mul(weightDiff).div(
                     _oldWeights[i]
@@ -234,7 +259,25 @@ contract Rebalancing is ReentrancyGuardUpgradeable {
                 address t = _index.getTokens()[i];
                 // token removed
                 if (newDenorms[i] == 0) {
-                    uint256 tokenBalance = IERC20(t).balanceOf(_index.vault());
+                    uint256 tokenBalance;
+                    if (
+                        tokenMetadata.vTokens(_index.getTokens()[i]) !=
+                        address(0)
+                    ) {
+                        if (_index.getTokens()[i] != indexManager.getETH()) {
+                            VBep20Interface token = VBep20Interface(
+                                tokenMetadata.vTokens(_index.getTokens()[i])
+                            );
+                            tokenBalance = token.balanceOf(_index.vault());
+                        } else {
+                            IVBNB token = IVBNB(
+                                tokenMetadata.vTokens(_index.getTokens()[i])
+                            );
+                            tokenBalance = token.balanceOf(_index.vault());
+                        }
+                    } else {
+                        tokenBalance = IERC20(t).balanceOf(_index.vault());
+                    }
 
                     if (t == indexManager.getETH()) {
                         indexManager._pullFromVault(

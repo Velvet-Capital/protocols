@@ -14,6 +14,9 @@ import "../interfaces/IWETH.sol";
 import "./IndexSwapLibrary.sol";
 import "./IndexManager.sol";
 import "../access/AccessController.sol";
+import "../venus/IVBNB.sol";
+import "../venus/VBep20Interface.sol";
+import "../venus/TokenMetadata.sol";
 
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -71,6 +74,7 @@ contract IndexSwap is TokenBase {
     IndexSwapLibrary public indexSwapLibrary;
     IndexManager public indexManager;
     AccessController public accessController;
+    TokenMetadata public tokenMetadata;
 
     bytes32 public constant DEFAULT_ADMIN_ROLE =
         keccak256("DEFAULT_ADMIN_ROLE");
@@ -89,7 +93,8 @@ contract IndexSwap is TokenBase {
         uint256 _maxInvestmentAmount,
         IndexSwapLibrary _indexSwapLibrary,
         IndexManager _indexManager,
-        AccessController _accessController
+        AccessController _accessController,
+        TokenMetadata _tokenMetadata
     ) public {
         __TokenBase_init(_name, _symbol);
 
@@ -99,6 +104,7 @@ contract IndexSwap is TokenBase {
         indexSwapLibrary = IndexSwapLibrary(_indexSwapLibrary);
         indexManager = IndexManager(_indexManager);
         accessController = _accessController;
+        tokenMetadata = _tokenMetadata;
 
         // OpenZeppelin Access Control
         accessController.setRoleAdmin(INDEX_MANAGER_ROLE, DEFAULT_ADMIN_ROLE);
@@ -221,8 +227,22 @@ contract IndexSwap is TokenBase {
 
         for (uint256 i = 0; i < _tokens.length; i++) {
             address t = _tokens[i];
+            uint256 tokenBalance;
 
-            uint256 tokenBalance = IERC20(t).balanceOf(vault);
+            if (tokenMetadata.vTokens(t) != address(0)) {
+                if (t != indexManager.getETH()) {
+                    VBep20Interface token = VBep20Interface(
+                        tokenMetadata.vTokens(t)
+                    );
+                    tokenBalance = token.balanceOf(vault);
+                } else {
+                    IVBNB token = IVBNB(tokenMetadata.vTokens(t));
+                    tokenBalance = token.balanceOf(vault);
+                }
+            } else {
+                tokenBalance = IERC20(t).balanceOf(vault);
+            }
+
             uint256 amount = tokenBalance.mul(tokenAmount).div(
                 totalSupplyIndex
             );

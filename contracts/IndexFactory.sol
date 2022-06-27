@@ -7,6 +7,8 @@ import "./core/IndexSwapLibrary.sol";
 import "./core/IndexManager.sol";
 import "./oracle/PriceOracle.sol";
 import "./rebalance/Rebalancing.sol";
+import "./vault/MyModule.sol";
+import "./venus/TokenMetadata.sol";
 
 contract IndexFactory {
     event IndexCreation(
@@ -27,16 +29,21 @@ contract IndexFactory {
         address _uniswapRouter,
         address _outAsset,
         address _vault,
+        MyModule _myModule,
         uint256 _maxInvestmentAmount,
-        IndexSwapLibrary _indexSwapLibrary
+        IndexSwapLibrary _indexSwapLibrary,
+        TokenMetadata _tokenMetadata
     ) public returns (IndexSwap index) {
         // Access Controller
         AccessController _accessController = new AccessController();
-        _accessController.initialize();
 
         // Index Manager
-        IndexManager _indexManager = new IndexManager();
-        _indexManager.initialize(_accessController, _uniswapRouter);
+        IndexManager _indexManager = new IndexManager(
+            _accessController,
+            _uniswapRouter,
+            _myModule,
+            _tokenMetadata
+        );
 
         // Index Swap
         index = new IndexSwap();
@@ -48,7 +55,8 @@ contract IndexFactory {
             _maxInvestmentAmount,
             _indexSwapLibrary,
             _indexManager,
-            _accessController
+            _accessController,
+            _tokenMetadata
         );
 
         // Rebalancing
@@ -56,7 +64,8 @@ contract IndexFactory {
         rebalancing.initialize(
             _indexSwapLibrary,
             _indexManager,
-            _accessController
+            _accessController,
+            _tokenMetadata
         );
 
         emit IndexCreation(

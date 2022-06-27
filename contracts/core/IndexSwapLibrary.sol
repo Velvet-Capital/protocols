@@ -6,19 +6,30 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
 import "../interfaces/IPriceOracle.sol";
 import "../core/IndexSwap.sol";
+import "../venus/VBep20Interface.sol";
+import "../venus/IVBNB.sol";
+import "../venus/TokenMetadata.sol";
 
 contract IndexSwapLibrary {
+    event TokenBalanceUpdated(uint256[] tokenBalances, uint256 vaultValue);
+
     IPriceOracle oracle;
     address wETH;
+    TokenMetadata public tokenMetadata;
 
     using SafeMath for uint256;
 
     bytes32 public constant ASSET_MANAGER_ROLE =
         keccak256("ASSET_MANAGER_ROLE");
 
-    function initialize(address _oracle, address _weth) external {
+    function initialize(
+        address _oracle,
+        address _weth,
+        TokenMetadata _tokenMetadata
+    ) external {
         oracle = IPriceOracle(_oracle);
         wETH = _weth;
+        tokenMetadata = _tokenMetadata;
     }
 
     /**
@@ -29,7 +40,6 @@ contract IndexSwapLibrary {
      */
     function getTokenAndVaultBalance(IndexSwap _index)
         public
-        view
         returns (uint256[] memory tokenXBalance, uint256 vaultValue)
     {
         uint256[] memory tokenBalanceInBNB = new uint256[](
@@ -39,24 +49,59 @@ contract IndexSwapLibrary {
 
         if (_index.totalSupply() > 0) {
             for (uint256 i = 0; i < _index.getTokens().length; i++) {
-                uint256 tokenBalance = IERC20(_index.getTokens()[i]).balanceOf(
-                    _index.vault()
-                );
+                uint256 tokenBalance;
                 uint256 tokenBalanceBNB;
 
-                tokenBalanceBNB = _getTokenAmountInBNB(
-                    _index,
-                    _index.getTokens()[i],
-                    tokenBalance
-                );
+                if (
+                    tokenMetadata.vTokens(_index.getTokens()[i]) != address(0)
+                ) {
+                    if (_index.getTokens()[i] != wETH) {
+                        VBep20Interface token = VBep20Interface(
+                            tokenMetadata.vTokens(_index.getTokens()[i])
+                        );
+                        tokenBalance = token.balanceOfUnderlying(
+                            _index.vault()
+                        );
+                        uint256 priceToken;
+                        uint256 decimal = oracle.getDecimal(
+                            _index.getTokens()[i]
+                        );
+
+                        priceToken = oracle.getTokenPrice(
+                            _index.getTokens()[i],
+                            wETH
+                        );
+                        tokenBalanceBNB = priceToken.mul(tokenBalance).div(
+                            10**decimal
+                        );
+                    } else {
+                        IVBNB token = IVBNB(
+                            tokenMetadata.vTokens(_index.getTokens()[i])
+                        );
+                        tokenBalanceBNB = token.balanceOfUnderlying(
+                            _index.vault()
+                        );
+                    }
+                } else {
+                    tokenBalance = IERC20(_index.getTokens()[i]).balanceOf(
+                        _index.vault()
+                    );
+                    tokenBalanceBNB = _getTokenAmountInBNB(
+                        _index,
+                        _index.getTokens()[i],
+                        tokenBalance
+                    );
+                }
 
                 tokenBalanceInBNB[i] = tokenBalanceBNB;
                 vaultBalance = vaultBalance.add(tokenBalanceBNB);
 
                 require(vaultBalance > 0, "sum price is not greater than 0");
             }
+            emit TokenBalanceUpdated(tokenBalanceInBNB, vaultBalance);
             return (tokenBalanceInBNB, vaultBalance);
         } else {
+            emit TokenBalanceUpdated(new uint256[](0), 0);
             return (new uint256[](0), 0);
         }
     }

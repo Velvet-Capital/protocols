@@ -8,17 +8,27 @@ import "../interfaces/IWETH.sol";
 import "../core/IndexSwapLibrary.sol";
 import "./IndexSwap.sol";
 import "../access/AccessController.sol";
+import "../vault/MyModule.sol";
+import "../venus/VBep20Interface.sol";
+import "../venus/IVBNB.sol";
+import "../venus/TokenMetadata.sol";
 
 contract IndexManager {
     IUniswapV2Router02 public pancakeSwapRouter;
     AccessController public accessController;
+    MyModule internal gnosisSafe;
+    TokenMetadata public tokenMetadata;
 
-    function initialize(
+    constructor(
         AccessController _accessController,
-        address _pancakeSwapAddress
-    ) public {
+        address _pancakeSwapAddress,
+        MyModule _myModule,
+        TokenMetadata _tokenMetadata
+    ) {
         pancakeSwapRouter = IUniswapV2Router02(_pancakeSwapAddress);
         accessController = _accessController;
+        gnosisSafe = _myModule;
+        tokenMetadata = _tokenMetadata;
     }
 
     /**
@@ -45,7 +55,23 @@ contract IndexManager {
         uint256 amount,
         address to
     ) public onlyIndexManager {
-        TransferHelper.safeTransferFrom(t, _index.vault(), to, amount);
+        if (tokenMetadata.vTokens(t) != address(0)) {
+            if (address(gnosisSafe) != address(0)) {
+                gnosisSafe.executeTransactionOther(
+                    to,
+                    amount,
+                    tokenMetadata.vTokens(t)
+                );
+            } else {
+                TransferHelper.safeTransferFrom(t, _index.vault(), to, amount);
+            }
+        } else {
+            if (address(gnosisSafe) != address(0)) {
+                gnosisSafe.executeTransactionOther(to, amount, t);
+            } else {
+                TransferHelper.safeTransferFrom(t, _index.vault(), to, amount);
+            }
+        }
     }
 
     /**
@@ -63,23 +89,38 @@ contract IndexManager {
         if (t == getETH()) {
             IWETH(t).deposit{value: swapAmount}();
             swapResult = swapAmount;
-            if (to != address(this)) {
+            if (tokenMetadata.vTokens(t) != address(0)) {
+                lendBNB(t, tokenMetadata.vTokens(t), swapResult, to);
+            } else if (to != address(this)) {
                 IWETH(t).transfer(to, swapAmount);
             }
         } else {
-            swapResult = pancakeSwapRouter.swapExactETHForTokens{
-                value: swapAmount
-            }(
-                0,
-                getPathForETH(t),
-                to,
-                block.timestamp // using 'now' for convenience, for mainnet pass deadline from frontend!
-            )[1];
+            if (tokenMetadata.vTokens(t) != address(0)) {
+                swapResult = pancakeSwapRouter.swapExactETHForTokens{
+                    value: swapAmount
+                }(
+                    0,
+                    getPathForETH(t),
+                    address(this),
+                    block.timestamp // using 'now' for convenience, for mainnet pass deadline from frontend!
+                )[1];
+                lendToken(t, tokenMetadata.vTokens(t), swapResult, to);
+            } else {
+                swapResult = pancakeSwapRouter.swapExactETHForTokens{
+                    value: swapAmount
+                }(
+                    0,
+                    getPathForETH(t),
+                    to,
+                    block.timestamp // using 'now' for convenience, for mainnet pass deadline from frontend!
+                )[1];
+            }
         }
     }
 
     /**
      * @notice The function swaps a specific token to ETH
+     * @dev Requires the tokens to be send to this contract address before swapping
      * @param t The token being swapped to ETH
      * @param swapAmount The amount being swapped
      * @param to The address where ETH is being send to after swapping
@@ -90,6 +131,13 @@ contract IndexManager {
         uint256 swapAmount,
         address to
     ) public onlyIndexManager returns (uint256 swapResult) {
+        if (tokenMetadata.vTokens(t) != address(0)) {
+            if (t == getETH()) {
+                redeemBNB(tokenMetadata.vTokens(t), swapAmount);
+            } else {
+                redeemTokens(t, tokenMetadata.vTokens(t), swapAmount);
+            }
+        }
         TransferHelper.safeApprove(t, address(pancakeSwapRouter), swapAmount);
         swapResult = pancakeSwapRouter.swapExactTokensForETH(
             swapAmount,
@@ -98,6 +146,62 @@ contract IndexManager {
             to,
             block.timestamp
         )[1];
+    }
+
+    // VENUS
+    function lendToken(
+        address _underlyingAsset,
+        address _vAsset,
+        uint256 _amount,
+        address _to
+    ) internal {
+        IERC20 underlyingToken = IERC20(_underlyingAsset);
+        VBep20Interface vToken = VBep20Interface(_vAsset);
+
+        underlyingToken.approve(address(vToken), _amount);
+        assert(vToken.mint(_amount) == 0);
+        uint256 vBalance = vToken.balanceOf(address(this));
+        TransferHelper.safeTransfer(_vAsset, _to, vBalance);
+    }
+
+    function lendBNB(
+        address _underlyingAsset,
+        address _vAsset,
+        uint256 _amount,
+        address _to
+    ) internal {
+        IERC20 underlyingToken = IERC20(_underlyingAsset);
+        IVBNB vToken = IVBNB(_vAsset);
+
+        underlyingToken.approve(address(vToken), _amount);
+        vToken.mint{value: _amount}();
+        uint256 vBalance = vToken.balanceOf(address(this));
+        TransferHelper.safeTransfer(_vAsset, _to, vBalance);
+    }
+
+    function redeemTokens(
+        address _underlyingAsset,
+        address _vAsset,
+        uint256 _amount
+    ) internal {
+        IERC20 underlyingToken = IERC20(_underlyingAsset);
+        VBep20Interface vToken = VBep20Interface(_vAsset);
+
+        require(
+            _amount <= vToken.balanceOf(address(this)),
+            "not enough balance in venus protocol"
+        );
+        require(vToken.redeem(_amount) == 0, "redeeming vToken failed");
+    }
+
+    function redeemBNB(address _vAsset, uint256 _amount) internal {
+        IVBNB vToken = IVBNB(_vAsset);
+
+        require(
+            _amount <= vToken.balanceOf(address(this)),
+            "not enough balance in venus protocol"
+        );
+        require(vToken.redeem(_amount) == 0, "redeeming vToken failed");
     }
 
     /**
