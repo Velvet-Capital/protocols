@@ -53,7 +53,9 @@
   },
   "packageManager": "yarn@3.1.1",
   "dependencies": {
+    "@gnosis.pm/zodiac": "^1.0.11",
     "@uniswap/lib": "^4.0.1-alpha",
-    "@uniswap/sdk": "^3.0.3"
+    "@uniswap/sdk": "^3.0.3",
+    "chai-bignumber": "^3.0.0"
   }
 }

@@ -5,6 +5,7 @@ contract TokenMetadata {
     mapping(address => address) public vTokens;
 
     function add(address _underlying, address _vToken) public {
+        // TODO check if _vToken is a valid vToken
         vTokens[_underlying] = _vToken;
     }
 }
