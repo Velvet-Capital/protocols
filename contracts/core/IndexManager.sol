@@ -87,12 +87,15 @@ contract IndexManager {
         address to
     ) public payable onlyIndexManager returns (uint256 swapResult) {
         if (t == getETH()) {
-            IWETH(t).deposit{value: swapAmount}();
-            swapResult = swapAmount;
             if (tokenMetadata.vTokens(t) != address(0)) {
                 lendBNB(t, tokenMetadata.vTokens(t), swapResult, to);
-            } else if (to != address(this)) {
-                IWETH(t).transfer(to, swapAmount);
+            } else {
+                IWETH(t).deposit{value: swapAmount}();
+                swapResult = swapAmount;
+
+                if (to != address(this)) {
+                    IWETH(t).transfer(to, swapAmount);
+                }
             }
         } else {
             if (tokenMetadata.vTokens(t) != address(0)) {
@@ -134,18 +137,46 @@ contract IndexManager {
         if (tokenMetadata.vTokens(t) != address(0)) {
             if (t == getETH()) {
                 redeemBNB(tokenMetadata.vTokens(t), swapAmount);
+                IERC20 token = IERC20(t);
+                swapResult = token.balanceOf(address(this));
             } else {
                 redeemTokens(t, tokenMetadata.vTokens(t), swapAmount);
+                IERC20 token = IERC20(t);
+                uint256 amount = token.balanceOf(address(this));
+                require(amount > 0, "zero balance amount");
+
+                TransferHelper.safeApprove(
+                    t,
+                    address(pancakeSwapRouter),
+                    amount
+                );
+                swapResult = pancakeSwapRouter.swapExactTokensForETH(
+                    amount,
+                    0,
+                    getPathForToken(t),
+                    to,
+                    block.timestamp
+                )[1];
+            }
+        } else {
+            TransferHelper.safeApprove(
+                t,
+                address(pancakeSwapRouter),
+                swapAmount
+            );
+            if (t == getETH()) {
+                IWETH(t).withdraw(swapAmount);
+                swapResult = swapAmount;
+            } else {
+                swapResult = pancakeSwapRouter.swapExactTokensForETH(
+                    swapAmount,
+                    0,
+                    getPathForToken(t),
+                    to,
+                    block.timestamp
+                )[1];
             }
         }
-        TransferHelper.safeApprove(t, address(pancakeSwapRouter), swapAmount);
-        swapResult = pancakeSwapRouter.swapExactTokensForETH(
-            swapAmount,
-            0,
-            getPathForToken(t),
-            to,
-            block.timestamp
-        )[1];
     }
 
     // VENUS
