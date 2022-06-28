@@ -92,6 +92,11 @@ describe.only("Tests for IndexSwap", () => {
           ethInstance.address,
           "0xf508fCD89b8bd15579dc79A6827cB4686A3592c8"
         );
+
+        tokenMetadata.add(
+          wbnbInstance.address,
+          "0xA07c5b74C9B40447a954e1466938b865b6BBea36"
+        );
       }
 
       const IndexSwapLibrary = await ethers.getContractFactory(
@@ -185,7 +190,7 @@ describe.only("Tests for IndexSwap", () => {
       });
       it("Initialize IndexFund Tokens", async () => {
         await indexSwap.init(
-          [busdInstance.address, ethInstance.address],
+          [wbnbInstance.address, ethInstance.address],
           [5000, 5000]
         );
       });
