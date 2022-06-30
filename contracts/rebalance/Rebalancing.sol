@@ -67,6 +67,19 @@ contract Rebalancing is ReentrancyGuardUpgradeable {
     }
 
     /**
+    @notice The function will pause the InvestInFund() and Withdrawal().
+    @param _index The portfolio address whose functions need to paused.
+    @param _state The state is bool value which needs to input by the Index Manager.
+    */
+    function setPause(
+        IndexSwap _index,
+        bool _state
+    )   public
+        onlyAssetManager {
+            _index.setPaused(_state);
+    }
+
+    /**
      * @notice The function sells the excessive token amount of each token considering the new weights
      * @param _oldWeights The current token allocation in the portfolio
      * @param _newWeights The new token allocation the portfolio should be rebalanced to

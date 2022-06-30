@@ -47,6 +47,9 @@ contract IndexSwap is TokenBase {
 
     address public vault;
 
+    bool public paused = false;
+
+
     /**
      * @dev Token record data structure
      * @param lastDenormUpdate timestamp of last denorm change
@@ -167,6 +170,7 @@ contract IndexSwap is TokenBase {
             (before minting)
      */
     function investInFund() public payable nonReentrant {
+        require(!paused, "The contract is paused !");
         uint256 tokenAmount = msg.value;
         require(_tokens.length != 0, "NOT INITIALIZED");
         require(
@@ -216,6 +220,7 @@ contract IndexSwap is TokenBase {
      * @param tokenAmount The index token amount the user wants to withdraw from the fund
      */
     function withdrawFund(uint256 tokenAmount) public nonReentrant {
+        require(!paused, "The contract is paused !");
         require(
             tokenAmount <= balanceOf(msg.sender),
             "caller is not holding given token amount"
@@ -299,6 +304,17 @@ contract IndexSwap is TokenBase {
             "Caller is not an Rebalancer Contract"
         );
         _;
+    }
+
+    /**
+    @notice The function will pause the InvestInFund() and Withdrawal() called by the rebalancing contract.
+    @param _state The state is bool value which needs to input by the Index Manager.
+    */
+    function setPaused(bool _state) 
+        public
+        onlyRebalancerContract 
+    {
+        paused = _state;
     }
 
     /**
