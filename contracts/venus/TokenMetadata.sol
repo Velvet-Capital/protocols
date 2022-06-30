@@ -18,4 +18,13 @@ contract TokenMetadata {
         require(vTokens[_underlying] != _vToken, "Pair already exists!");
         vTokens[_underlying] = _vToken;
     }
+
+    function addBNB() public {
+        require(
+            vTokens[0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c] == address(0)
+        );
+        vTokens[
+            0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c
+        ] = 0xA07c5b74C9B40447a954e1466938b865b6BBea36;
+    }
 }
