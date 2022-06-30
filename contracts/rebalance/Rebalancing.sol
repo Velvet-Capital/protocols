@@ -113,6 +113,7 @@ contract Rebalancing is ReentrancyGuardUpgradeable {
                         swapAmount,
                         address(this)
                     );
+                    IWETH(t).withdraw(swapAmount);
                 } else {
                     indexManager._pullFromVault(
                         _index,
@@ -286,6 +287,7 @@ contract Rebalancing is ReentrancyGuardUpgradeable {
                             tokenBalance,
                             address(this)
                         );
+                        IWETH(t).withdraw(tokenBalance);
                     } else {
                         indexManager._pullFromVault(
                             _index,

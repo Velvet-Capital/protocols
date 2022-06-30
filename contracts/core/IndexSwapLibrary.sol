@@ -62,17 +62,11 @@ contract IndexSwapLibrary {
                         tokenBalance = token.balanceOfUnderlying(
                             _index.vault()
                         );
-                        uint256 priceToken;
-                        uint256 decimal = oracle.getDecimal(
-                            _index.getTokens()[i]
-                        );
 
-                        priceToken = oracle.getTokenPrice(
+                        tokenBalanceBNB = _getTokenAmountInBNB(
+                            _index,
                             _index.getTokens()[i],
-                            wETH
-                        );
-                        tokenBalanceBNB = priceToken.mul(tokenBalance).div(
-                            10**decimal
+                            tokenBalance
                         );
                     } else {
                         IVBNB token = IVBNB(
