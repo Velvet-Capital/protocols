@@ -140,7 +140,7 @@ contract IndexManager {
                 IERC20 token = IERC20(t);
                 swapResult = token.balanceOf(address(this));
             } else {
-                redeemTokens(tokenMetadata.vTokens(t), swapAmount);
+                redeemToken(tokenMetadata.vTokens(t), swapAmount);
                 IERC20 token = IERC20(t);
                 uint256 amount = token.balanceOf(address(this));
                 require(amount > 0, "zero balance amount");
@@ -210,7 +210,7 @@ contract IndexManager {
         TransferHelper.safeTransfer(_vAsset, _to, vBalance);
     }
 
-    function redeemTokens(address _vAsset, uint256 _amount) internal {
+    function redeemToken(address _vAsset, uint256 _amount) internal {
         VBep20Interface vToken = VBep20Interface(_vAsset);
 
         require(
