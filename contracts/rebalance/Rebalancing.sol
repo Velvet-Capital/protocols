@@ -67,6 +67,21 @@ contract Rebalancing is ReentrancyGuardUpgradeable {
     }
 
     /**
+    * @notice This function will pause the state of a function.
+    * @param _index The portfolio address whose functions needs to be paused.
+    * @param _state The state input from the manager.
+    */
+
+    function setPause(
+        IndexSwap _index,
+        bool _state
+    )   public
+        onlyAssetManager {
+            _index.setPaused(_state);
+    } 
+
+
+    /**
      * @notice The function sells the excessive token amount of each token considering the new weights
      * @param _oldWeights The current token allocation in the portfolio
      * @param _newWeights The new token allocation the portfolio should be rebalanced to
@@ -113,7 +128,6 @@ contract Rebalancing is ReentrancyGuardUpgradeable {
                         swapAmount,
                         address(this)
                     );
-                    IWETH(t).withdraw(swapAmount);
                 } else {
                     indexManager._pullFromVault(
                         _index,
@@ -287,7 +301,6 @@ contract Rebalancing is ReentrancyGuardUpgradeable {
                             tokenBalance,
                             address(this)
                         );
-                        IWETH(t).withdraw(tokenBalance);
                     } else {
                         indexManager._pullFromVault(
                             _index,
