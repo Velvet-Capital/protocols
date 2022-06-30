@@ -47,8 +47,7 @@ contract IndexSwap is TokenBase {
 
     address public vault;
 
-    bool public paused = false;
-
+    bool public paused;
 
     /**
      * @dev Token record data structure
@@ -108,6 +107,7 @@ contract IndexSwap is TokenBase {
         indexManager = IndexManager(_indexManager);
         accessController = _accessController;
         tokenMetadata = _tokenMetadata;
+        paused = false;
 
         // OpenZeppelin Access Control
         accessController.setRoleAdmin(INDEX_MANAGER_ROLE, DEFAULT_ADMIN_ROLE);
@@ -310,10 +310,7 @@ contract IndexSwap is TokenBase {
     @notice The function will pause the InvestInFund() and Withdrawal() called by the rebalancing contract.
     @param _state The state is bool value which needs to input by the Index Manager.
     */
-    function setPaused(bool _state) 
-        public
-        onlyRebalancerContract 
-    {
+    function setPaused(bool _state) public onlyRebalancerContract {
         paused = _state;
     }
 
