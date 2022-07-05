@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4 || ^0.7.6 || ^0.8.0;
 
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20BurnableUpgradeable.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
@@ -22,21 +21,10 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
-contract TokenBase is
-    Initializable,
-    ERC20BurnableUpgradeable,
-    OwnableUpgradeable,
-    ReentrancyGuardUpgradeable
-{
-    function __TokenBase_init(string memory _name, string memory _symbol)
-        internal
-        initializer
-    {
-        __ERC20_init(_name, _symbol);
-        __ERC20Burnable_init();
-        __Ownable_init();
-        __ReentrancyGuard_init();
-    }
+contract TokenBase is ERC20Burnable, Ownable, ReentrancyGuard {
+    constructor(string memory _name, string memory _symbol)
+        ERC20(_name, _symbol)
+    {}
 }
 
 contract IndexSwap is TokenBase {
@@ -87,7 +75,7 @@ contract IndexSwap is TokenBase {
     bytes32 public constant INDEX_MANAGER_ROLE =
         keccak256("INDEX_MANAGER_ROLE");
 
-    function initialize(
+    constructor(
         string memory _name,
         string memory _symbol,
         address _outAsset,
@@ -97,9 +85,7 @@ contract IndexSwap is TokenBase {
         IndexManager _indexManager,
         AccessController _accessController,
         TokenMetadata _tokenMetadata
-    ) public {
-        __TokenBase_init(_name, _symbol);
-
+    ) TokenBase(_name, _symbol) {
         vault = _vault;
         outAsset = _outAsset; //As now we are tacking busd
         MAX_INVESTMENTAMOUNT = _maxInvestmentAmount;

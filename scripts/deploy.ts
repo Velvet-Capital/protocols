@@ -21,50 +21,68 @@ async function main() {
   const { chainId } = await ethers.provider.getNetwork();
   const addresses = chainIdToAddresses[chainId];
 
+  // Price Oracle
+  const PriceOracle = await ethers.getContractFactory("PriceOracle");
+  const priceOracle = await PriceOracle.deploy();
+  await priceOracle.deployed();
+  priceOracle.initialize(addresses.PancakeSwapRouterAddress);
+
+  // Token Metadata
   const TokenMetadata = await ethers.getContractFactory("TokenMetadata");
   const tokenMetadata = await TokenMetadata.deploy();
   await tokenMetadata.deployed();
 
-  // We get the contract to deploy
+  // Access Controller
   const AccessController = await ethers.getContractFactory("AccessController");
-  const accessProxy = await upgrades.deployProxy(AccessController);
-  await accessProxy.deployed();
+  const accessController = await AccessController.deploy();
+  await accessController.deployed();
 
+  // Index Library
+  const IndexSwapLibrary = await ethers.getContractFactory("IndexSwapLibrary");
+  const indexSwapLibrary = await IndexSwapLibrary.deploy(
+    priceOracle.address,
+    addresses.WETH_Address,
+    tokenMetadata.address
+  );
+  await indexSwapLibrary.deployed();
+
+  // Index Manager
   const IndexManager = await ethers.getContractFactory("IndexManager");
-  const managerProxy = await IndexManager.deploy(
-    accessProxy.address,
+  const indexManager = await IndexManager.deploy(
+    accessController.address,
     addresses.PancakeSwapRouterAddress,
     addresses.Module,
     tokenMetadata.address
   );
-  await managerProxy.deployed();
+  await indexManager.deployed();
 
+  // Index Swap
   const IndexSwap = await ethers.getContractFactory("IndexSwap");
-  const indexProxy = await upgrades.deployProxy(IndexSwap, [
-    "METAVERSE Portfolio",
-    "META",
+  const indexSwap = await IndexSwap.deploy(
+    "INDEXLY",
+    "IDX",
     addresses.WETH_Address,
     addresses.Vault,
     "500000000000000000000",
-    addresses.IndexSwapLibrary,
-    managerProxy.address,
-    accessProxy.address,
-  ]);
-  await indexProxy.deployed();
+    indexSwapLibrary.address,
+    indexManager.address,
+    accessController.address,
+    tokenMetadata.address
+  );
+  await indexSwap.deployed();
 
   const Rebalancing = await ethers.getContractFactory("Rebalancing");
-  const rebalanceProxy = await upgrades.deployProxy(Rebalancing, [
-    addresses.IndexSwapLibrary,
-    managerProxy.address,
-    accessProxy.address,
-    tokenMetadata.address,
-  ]);
-  await rebalanceProxy.deployed();
+  const rebalancing = await Rebalancing.deploy(
+    indexSwapLibrary.address,
+    indexManager.address,
+    accessController.address,
+    tokenMetadata.address
+  );
+  await rebalancing.deployed();
 
-  console.log(`IndexManager deployed to: ${managerProxy.address}`);
-  console.log(`IndexSwap deployed to: ${indexProxy.address}`);
-  console.log(`Rebalancing deployed to: ${rebalanceProxy.address}`);
-
+  console.log(`IndexManager deployed to: ${indexManager.address}`);
+  console.log(`IndexSwap deployed to: ${indexSwap.address}`);
+  console.log(`Rebalancing deployed to: ${rebalancing.address}`);
 }
 
 // We recommend this pattern to be able to use async/await everywhere

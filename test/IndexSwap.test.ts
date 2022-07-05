@@ -76,12 +76,9 @@ describe.only("Tests for IndexSwap", () => {
       accounts = await ethers.getSigners();
       [owner, investor1, nonOwner, vault, addr1, addr2, ...addrs] = accounts;
       const PriceOracle = await ethers.getContractFactory("PriceOracle");
-
-      const priceProxy = await upgrades.deployProxy(PriceOracle, [
-        addresses.PancakeSwapRouterAddress,
-      ]);
-      await priceProxy.deployed();
-      priceOracle = PriceOracle.attach(priceProxy.address);
+      priceOracle = await PriceOracle.deploy();
+      await priceOracle.deployed();
+      priceOracle.initialize(addresses.PancakeSwapRouterAddress);
 
       const TokenMetadata = await ethers.getContractFactory("TokenMetadata");
       tokenMetadata = await TokenMetadata.deploy();
@@ -102,13 +99,12 @@ describe.only("Tests for IndexSwap", () => {
       const IndexSwapLibrary = await ethers.getContractFactory(
         "IndexSwapLibrary"
       );
-      const libraryProxy = await upgrades.deployProxy(IndexSwapLibrary, [
+      indexSwapLibrary = await IndexSwapLibrary.deploy(
         priceOracle.address,
         addresses.WETH_Address,
-        tokenMetadata.address,
-      ]);
-      await libraryProxy.deployed();
-      indexSwapLibrary = IndexSwapLibrary.attach(libraryProxy.address);
+        tokenMetadata.address
+      );
+      await indexSwapLibrary.deployed();
 
       const AccessController = await ethers.getContractFactory(
         "AccessController"
@@ -117,7 +113,7 @@ describe.only("Tests for IndexSwap", () => {
       await accessController.deployed();
 
       const IndexManager = await ethers.getContractFactory("IndexManager");
-      const indexManager = await IndexManager.deploy(
+      indexManager = await IndexManager.deploy(
         accessController.address,
         addresses.PancakeSwapRouterAddress,
         addresses.Module,
@@ -126,7 +122,7 @@ describe.only("Tests for IndexSwap", () => {
       await indexManager.deployed();
 
       const IndexSwap = await ethers.getContractFactory("IndexSwap");
-      const indexProxy = await upgrades.deployProxy(IndexSwap, [
+      indexSwap = await IndexSwap.deploy(
         "INDEXLY",
         "IDX",
         addresses.WETH_Address,
@@ -135,20 +131,18 @@ describe.only("Tests for IndexSwap", () => {
         indexSwapLibrary.address,
         indexManager.address,
         accessController.address,
-        tokenMetadata.address,
-      ]);
-      await indexProxy.deployed();
-      indexSwap = IndexSwap.attach(indexProxy.address);
+        tokenMetadata.address
+      );
+      await indexSwap.deployed();
 
       const Rebalancing = await ethers.getContractFactory("Rebalancing");
-      const rebalanceProxy = await upgrades.deployProxy(Rebalancing, [
+      rebalancing = await Rebalancing.deploy(
         indexSwapLibrary.address,
         indexManager.address,
         accessController.address,
-        tokenMetadata.address,
-      ]);
-      await rebalanceProxy.deployed();
-      rebalancing = Rebalancing.attach(rebalanceProxy.address);
+        tokenMetadata.address
+      );
+      await rebalancing.deployed();
 
       if (addresses.Module != "0x0000000000000000000000000000000000000000") {
         const MyModule = ethers.getContractFactory("MyModule");

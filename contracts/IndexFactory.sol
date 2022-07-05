@@ -46,8 +46,7 @@ contract IndexFactory {
         );
 
         // Index Swap
-        index = new IndexSwap();
-        index.initialize(
+        index = new IndexSwap(
             _name,
             _symbol,
             _outAsset,
@@ -60,8 +59,7 @@ contract IndexFactory {
         );
 
         // Rebalancing
-        Rebalancing rebalancing = new Rebalancing();
-        rebalancing.initialize(
+        Rebalancing rebalancing = new Rebalancing(
             _indexSwapLibrary,
             _indexManager,
             _accessController,
