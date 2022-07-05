@@ -23,6 +23,8 @@ contract IndexFactory {
         AccessController _accessController
     );
 
+    event RebalanceCreation(Rebalancing _rebalancing);
+
     function createIndex(
         string memory _name,
         string memory _symbol,
@@ -32,7 +34,9 @@ contract IndexFactory {
         MyModule _myModule,
         uint256 _maxInvestmentAmount,
         IndexSwapLibrary _indexSwapLibrary,
-        TokenMetadata _tokenMetadata
+        TokenMetadata _tokenMetadata,
+        uint256 _feePointBasis,
+        address _treasury
     ) public returns (IndexSwap index) {
         // Access Controller
         AccessController _accessController = new AccessController();
@@ -55,15 +59,9 @@ contract IndexFactory {
             _indexSwapLibrary,
             _indexManager,
             _accessController,
-            _tokenMetadata
-        );
-
-        // Rebalancing
-        Rebalancing rebalancing = new Rebalancing(
-            _indexSwapLibrary,
-            _indexManager,
-            _accessController,
-            _tokenMetadata
+            _tokenMetadata,
+            _feePointBasis,
+            _treasury
         );
 
         emit IndexCreation(
@@ -77,6 +75,16 @@ contract IndexFactory {
             _indexManager,
             _accessController
         );
+
+        // Rebalancing
+        Rebalancing rebalancing = new Rebalancing(
+            _indexSwapLibrary,
+            _indexManager,
+            _accessController,
+            _tokenMetadata
+        );
+
+        emit RebalanceCreation(rebalancing);
     }
 
     function initializeTokens(

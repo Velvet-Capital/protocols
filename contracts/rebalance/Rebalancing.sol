@@ -89,8 +89,6 @@ contract Rebalancing is ReentrancyGuard {
         // sell - swap to BNB
         for (uint256 i = 0; i < _index.getTokens().length; i++) {
             if (_newWeights[i] < _oldWeights[i]) {
-                address t = _index.getTokens()[i];
-
                 uint256 tokenBalance;
                 if (
                     tokenMetadata.vTokens(_index.getTokens()[i]) != address(0)
@@ -107,7 +105,9 @@ contract Rebalancing is ReentrancyGuard {
                         tokenBalance = token.balanceOf(_index.vault());
                     }
                 } else {
-                    tokenBalance = IERC20(t).balanceOf(_index.vault());
+                    tokenBalance = IERC20(_index.getTokens()[i]).balanceOf(
+                        _index.vault()
+                    );
                 }
 
                 uint256 weightDiff = _oldWeights[i].sub(_newWeights[i]);
@@ -115,22 +115,26 @@ contract Rebalancing is ReentrancyGuard {
                     _oldWeights[i]
                 );
 
-                if (t == indexManager.getETH()) {
+                if (_index.getTokens()[i] == indexManager.getETH()) {
                     indexManager._pullFromVault(
                         _index,
-                        t,
+                        _index.getTokens()[i],
                         swapAmount,
                         address(this)
                     );
-                    IWETH(t).withdraw(swapAmount);
+                    IWETH(_index.getTokens()[i]).withdraw(swapAmount);
                 } else {
                     indexManager._pullFromVault(
                         _index,
-                        t,
+                        _index.getTokens()[i],
                         swapAmount,
                         address(indexManager)
                     );
-                    indexManager._swapTokenToETH(t, swapAmount, address(this));
+                    indexManager._swapTokenToETH(
+                        _index.getTokens()[i],
+                        swapAmount,
+                        address(this)
+                    );
                 }
             } else if (_newWeights[i] > _oldWeights[i]) {
                 uint256 diff = _newWeights[i].sub(_oldWeights[i]);
@@ -152,7 +156,6 @@ contract Rebalancing is ReentrancyGuard {
     ) internal {
         uint256 totalBNBAmount = address(this).balance;
         for (uint256 i = 0; i < _index.getTokens().length; i++) {
-            address t = _index.getTokens()[i];
             if (_newWeights[i] > _oldWeights[i]) {
                 uint256 weightToSwap = _newWeights[i].sub(_oldWeights[i]);
                 require(weightToSwap > 0, "weight not greater than 0");
@@ -162,7 +165,7 @@ contract Rebalancing is ReentrancyGuard {
                 );
 
                 indexManager._swapETHToToken{value: swapAmount}(
-                    t,
+                    _index.getTokens()[i],
                     swapAmount,
                     _index.vault()
                 );
@@ -212,7 +215,7 @@ contract Rebalancing is ReentrancyGuard {
             denorms.length == _index.getTokens().length,
             "Lengths don't match"
         );
-
+        feeModule(_index);
         _index.updateRecords(_index.getTokens(), denorms);
         rebalance(_index);
     }
@@ -256,6 +259,7 @@ contract Rebalancing is ReentrancyGuard {
             totalWeight = totalWeight.add(denorms[i]);
         }
         require(totalWeight == _index.TOTAL_WEIGHT(), "INVALID_WEIGHTS");
+        feeModule(_index);
 
         uint256[] memory newDenorms = evaluateNewDenorms(
             _index,
@@ -266,7 +270,6 @@ contract Rebalancing is ReentrancyGuard {
         if (_index.totalSupply() > 0) {
             // sell - swap to BNB
             for (uint256 i = 0; i < _index.getTokens().length; i++) {
-                address t = _index.getTokens()[i];
                 // token removed
                 if (newDenorms[i] == 0) {
                     uint256 tokenBalance;
@@ -286,32 +289,43 @@ contract Rebalancing is ReentrancyGuard {
                             tokenBalance = token.balanceOf(_index.vault());
                         }
                     } else {
-                        tokenBalance = IERC20(t).balanceOf(_index.vault());
+                        tokenBalance = IERC20(_index.getTokens()[i]).balanceOf(
+                            _index.vault()
+                        );
                     }
 
-                    if (t == indexManager.getETH()) {
+                    if (_index.getTokens()[i] == indexManager.getETH()) {
                         indexManager._pullFromVault(
                             _index,
-                            t,
+                            _index.getTokens()[i],
                             tokenBalance,
                             address(this)
                         );
-                        IWETH(t).withdraw(tokenBalance);
+                        if (
+                            tokenMetadata.vTokens(_index.getTokens()[i]) !=
+                            address(0)
+                        ) {
+                            indexManager.redeemBNB(
+                                tokenMetadata.vTokens(_index.getTokens()[i]),
+                                tokenBalance
+                            );
+                        }
+                        IWETH(_index.getTokens()[i]).withdraw(tokenBalance);
                     } else {
                         indexManager._pullFromVault(
                             _index,
-                            t,
+                            _index.getTokens()[i],
                             tokenBalance,
                             address(indexManager)
                         );
                         indexManager._swapTokenToETH(
-                            t,
+                            _index.getTokens()[i],
                             tokenBalance,
                             address(this)
                         );
                     }
 
-                    _index.deleteRecord(t);
+                    _index.deleteRecord(_index.getTokens()[i]);
                 }
             }
         }
@@ -320,6 +334,70 @@ contract Rebalancing is ReentrancyGuard {
         _index.updateTokenList(tokens);
 
         rebalance(_index);
+    }
+
+    // Fee module
+    function feeModule(IndexSwap _index) internal {
+        for (uint256 i = 0; i < _index.getTokens().length; i++) {
+            uint256 tokenBalance;
+            if (tokenMetadata.vTokens(_index.getTokens()[i]) != address(0)) {
+                if (_index.getTokens()[i] != indexManager.getETH()) {
+                    VBep20Interface token = VBep20Interface(
+                        tokenMetadata.vTokens(_index.getTokens()[i])
+                    );
+                    tokenBalance = token.balanceOf(_index.vault());
+                } else {
+                    IVBNB token = IVBNB(
+                        tokenMetadata.vTokens(_index.getTokens()[i])
+                    );
+                    tokenBalance = token.balanceOf(_index.vault());
+                }
+            } else {
+                tokenBalance = IERC20(_index.getTokens()[i]).balanceOf(
+                    _index.vault()
+                );
+            }
+
+            uint256 amount = tokenBalance.mul(_index.getFee()).div(10000);
+
+            if (_index.getTokens()[i] == indexManager.getETH()) {
+                indexManager._pullFromVault(
+                    _index,
+                    _index.getTokens()[i],
+                    amount,
+                    address(this)
+                );
+                if (
+                    tokenMetadata.vTokens(_index.getTokens()[i]) != address(0)
+                ) {
+                    indexManager.redeemBNB(
+                        tokenMetadata.vTokens(_index.getTokens()[i]),
+                        tokenBalance
+                    );
+                }
+                IWETH(_index.getTokens()[i]).withdraw(amount);
+                payable(_index.getTreasury()).transfer(amount);
+            } else {
+                indexManager._pullFromVault(
+                    _index,
+                    _index.getTokens()[i],
+                    amount,
+                    address(indexManager)
+                );
+                indexManager._swapTokenToETH(
+                    _index.getTokens()[i],
+                    amount,
+                    _index.getTreasury()
+                );
+            }
+        }
+    }
+
+    function updateTreasury(IndexSwap _index, address _newAddress)
+        public
+        onlyAssetManager
+    {
+        _index.updateTreasury(_newAddress);
     }
 
     // important to receive ETH

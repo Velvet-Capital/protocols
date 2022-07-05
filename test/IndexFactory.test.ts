@@ -134,7 +134,9 @@ describe.skip("Tests for IndexFactory", () => {
         addresses.Module,
         "500000000000000000000",
         indexSwapLibrary.address,
-        tokenMetadata.address
+        tokenMetadata.address,
+        "250",
+        owner.address
       );
       index.wait();
 
@@ -175,7 +177,9 @@ describe.skip("Tests for IndexFactory", () => {
           addresses.Module,
           "500000000000000000000",
           addresses.IndexSwapLibrary,
-          tokenMetadata.address
+          tokenMetadata.address,
+          "250",
+          owner.address
         );
 
         console.log("index return from factory", index);

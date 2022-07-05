@@ -66,6 +66,9 @@ contract IndexSwap is TokenBase {
     AccessController public accessController;
     TokenMetadata public tokenMetadata;
 
+    uint256 public feePointBasis;
+    address public treasury;
+
     bytes32 public constant DEFAULT_ADMIN_ROLE =
         keccak256("DEFAULT_ADMIN_ROLE");
 
@@ -84,7 +87,9 @@ contract IndexSwap is TokenBase {
         IndexSwapLibrary _indexSwapLibrary,
         IndexManager _indexManager,
         AccessController _accessController,
-        TokenMetadata _tokenMetadata
+        TokenMetadata _tokenMetadata,
+        uint256 _feePointBasis,
+        address _treasury
     ) TokenBase(_name, _symbol) {
         vault = _vault;
         outAsset = _outAsset; //As now we are tacking busd
@@ -94,6 +99,9 @@ contract IndexSwap is TokenBase {
         accessController = _accessController;
         tokenMetadata = _tokenMetadata;
         paused = false;
+
+        feePointBasis = _feePointBasis;
+        treasury = payable(_treasury);
 
         // OpenZeppelin Access Control
         accessController.setRoleAdmin(INDEX_MANAGER_ROLE, DEFAULT_ADMIN_ROLE);
@@ -342,6 +350,21 @@ contract IndexSwap is TokenBase {
 
     function deleteRecord(address t) public onlyRebalancerContract {
         delete _records[t];
+    }
+
+    function getTreasury() public view returns (address) {
+        return treasury;
+    }
+
+    function updateTreasury(address _newTreasury)
+        public
+        onlyRebalancerContract
+    {
+        treasury = _newTreasury;
+    }
+
+    function getFee() public view returns (uint256) {
+        return feePointBasis;
     }
 
     // important to receive ETH

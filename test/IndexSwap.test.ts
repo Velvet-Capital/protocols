@@ -131,7 +131,9 @@ describe.only("Tests for IndexSwap", () => {
         indexSwapLibrary.address,
         indexManager.address,
         accessController.address,
-        tokenMetadata.address
+        tokenMetadata.address,
+        "250",
+        owner.address
       );
       await indexSwap.deployed();
 
