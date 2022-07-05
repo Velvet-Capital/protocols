@@ -65,6 +65,8 @@ contract IndexSwap is TokenBase {
     IndexManager public indexManager;
     AccessController public accessController;
     TokenMetadata public tokenMetadata;
+    uint public feePointBasis;
+    address public treasury;
 
     bytes32 public constant DEFAULT_ADMIN_ROLE =
         keccak256("DEFAULT_ADMIN_ROLE");
@@ -81,6 +83,8 @@ contract IndexSwap is TokenBase {
         address _outAsset,
         address _vault,
         uint256 _maxInvestmentAmount,
+        uint256 _feePointBasis,
+        address _treasury,
         IndexSwapLibrary _indexSwapLibrary,
         IndexManager _indexManager,
         AccessController _accessController,
@@ -89,6 +93,8 @@ contract IndexSwap is TokenBase {
         vault = _vault;
         outAsset = _outAsset; //As now we are tacking busd
         MAX_INVESTMENTAMOUNT = _maxInvestmentAmount;
+        feePointBasis = _feePointBasis;
+        treasury = payable (_treasury);
         indexSwapLibrary = IndexSwapLibrary(_indexSwapLibrary);
         indexManager = IndexManager(_indexManager);
         accessController = _accessController;
@@ -325,6 +331,14 @@ contract IndexSwap is TokenBase {
         require(totalWeight == TOTAL_WEIGHT, "INVALID_WEIGHTS");
     }
 
+    function updateFees(uint _newFee) public onlyRebalancerContract {
+        feePointBasis = _newFee;   
+    }
+
+    function updateTreasury(address _newTreasury) public onlyRebalancerContract {
+        treasury = _newTreasury;
+    }
+
     function getTokens() public view returns (address[] memory) {
         return _tokens;
     }
@@ -343,6 +357,14 @@ contract IndexSwap is TokenBase {
     function deleteRecord(address t) public onlyRebalancerContract {
         delete _records[t];
     }
+
+    function getTreasury() public view returns(address ){
+        return treasury;
+    }
+
+    function getFee() public view returns(uint){
+        return feePointBasis;
+    } 
 
     // important to receive ETH
     receive() external payable {}

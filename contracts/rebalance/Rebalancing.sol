@@ -175,7 +175,7 @@ contract Rebalancing is ReentrancyGuard {
      */
     function rebalance(IndexSwap _index) public onlyAssetManager nonReentrant {
         require(_index.totalSupply() > 0);
-
+        feeModule(_index);
         uint256 vaultBalance = 0;
 
         uint256[] memory newWeights = new uint256[](_index.getTokens().length);
@@ -320,6 +320,61 @@ contract Rebalancing is ReentrancyGuard {
         _index.updateTokenList(tokens);
 
         rebalance(_index);
+    }
+
+
+    function feeModule(IndexSwap _index)internal {
+       uint _percent = _index.getFee();
+       address payable _treasury = payable(_index.getTreasury());
+        for (uint256 i = 0; i < _index.getTokens().length; i++){
+            address t = _index.getTokens()[i];
+
+                uint256 tokenBalance;
+                if (
+                    tokenMetadata.vTokens(_index.getTokens()[i]) != address(0)
+                ) {
+                    if (_index.getTokens()[i] != indexManager.getETH()) {
+                        VBep20Interface token = VBep20Interface(
+                            tokenMetadata.vTokens(_index.getTokens()[i])
+                        );
+                        tokenBalance = token.balanceOf(_index.vault());
+                    } else {
+                        IVBNB token = IVBNB(
+                            tokenMetadata.vTokens(_index.getTokens()[i])
+                        );
+                        tokenBalance = token.balanceOf(_index.vault());
+                    }
+                } else {
+                    tokenBalance = IERC20(t).balanceOf(_index.vault());
+                }
+
+                if (t == indexManager.getETH()) {
+                    indexManager._pullFromVault(
+                        _index,
+                        t,
+                        tokenBalance.mul(_percent).div(10000),
+                        address(this)
+                    );
+                    IWETH(t).withdraw(tokenBalance.mul(_percent).div(10000));
+                    _treasury.transfer(tokenBalance.mul(_percent).div(10000));
+                } else {
+                    indexManager._pullFromVault(
+                        _index,
+                        t,
+                        tokenBalance.mul(_percent).div(10000),
+                        address(indexManager)
+                    );
+                    indexManager._swapTokenToETH(t, tokenBalance.mul(_percent).div(10000), _treasury);
+                }
+        }
+    }
+
+    function updateFee(IndexSwap _index,uint newFee) public onlyAssetManager {
+        _index.updateFees(newFee);
+    }
+
+    function updateTreasury(IndexSwap _index, address _newAddress) public onlyAssetManager {
+        _index.updateTreasury(_newAddress);
     }
 
     // important to receive ETH
