@@ -202,7 +202,6 @@ describe.only("Tests for IndexSwap", () => {
           value: "100000000000000000",
         });
         const indexSupplyAfter = await indexSwap.totalSupply();
-        console.log("0.1bnb after 0.1BNB", indexSupplyAfter);
 
         const valuesAfter = await indexSwapLibrary.getTokenAndVaultBalance(
           indexSwap.address
@@ -277,19 +276,6 @@ describe.only("Tests for IndexSwap", () => {
         const afterVaultValue = Number(
           ethers.utils.formatEther(afterVaultValueBNB)
         );
-
-        console.log("tokens", afterTokenXBalance);
-        console.log("vault", afterVaultValue);
-        console.log(
-          Number(ethers.utils.formatEther(afterTokenXBalance[0])) /
-            afterVaultValue
-        );
-        console.log(
-          Number(ethers.utils.formatEther(afterTokenXBalance[1])) /
-            afterVaultValue
-        );
-        console.log("vault value", afterVaultValue);
-        console.log("total supply", await indexSwap.totalSupply());
       });
 
       it("Invest 2BNB into Top10 fund", async () => {
@@ -299,7 +285,6 @@ describe.only("Tests for IndexSwap", () => {
           value: "2000000000000000000",
         });
         const indexSupplyAfter = await indexSwap.totalSupply();
-        console.log("2bnb after 2BNB", indexSupplyAfter);
 
         const valuesAfter = await indexSwapLibrary.getTokenAndVaultBalance(
           indexSwap.address
@@ -374,19 +359,6 @@ describe.only("Tests for IndexSwap", () => {
         const afterVaultValue = Number(
           ethers.utils.formatEther(afterVaultValueBNB)
         );
-
-        console.log("tokens", afterTokenXBalance);
-        console.log("vault", afterVaultValue);
-        console.log(
-          Number(ethers.utils.formatEther(afterTokenXBalance[0])) /
-            afterVaultValue
-        );
-        console.log(
-          Number(ethers.utils.formatEther(afterTokenXBalance[1])) /
-            afterVaultValue
-        );
-        console.log("vault value", afterVaultValue);
-        console.log("total supply", await indexSwap.totalSupply());
       });
 
       it("BNB amount increases after investing", async () => {
@@ -406,6 +378,16 @@ describe.only("Tests for IndexSwap", () => {
           Number(indexSupplyBefore)
         );
       });
+
+      it("Investment should fail when contract is paused", async () => {
+        await rebalancing.setPause(indexSwap.address, true);
+        await expect(
+          indexSwap.investInFund({
+            value: "1000000000000000000",
+          })
+        ).to.be.reverted;
+      });
+
       it("Print values", async () => {
         let afterTokenXBalance;
         let afterVaultValueBNB;
@@ -444,19 +426,6 @@ describe.only("Tests for IndexSwap", () => {
         const afterVaultValue = Number(
           ethers.utils.formatEther(afterVaultValueBNB)
         );
-
-        console.log("tokens", afterTokenXBalance);
-        console.log("vault", afterVaultValue);
-        console.log(
-          Number(ethers.utils.formatEther(afterTokenXBalance[0])) /
-            afterVaultValue
-        );
-        console.log(
-          Number(ethers.utils.formatEther(afterTokenXBalance[1])) /
-            afterVaultValue
-        );
-        console.log("vault value", afterVaultValue);
-        console.log("total supply", await indexSwap.totalSupply());
       });
 
       it("should revert when Rebalance is called from an account which is not assigned as asset manager", async () => {
@@ -540,17 +509,6 @@ describe.only("Tests for IndexSwap", () => {
           ethers.utils.formatEther(afterVaultValueBNB)
         );
 
-        console.log(
-          Number(ethers.utils.formatEther(afterTokenXBalance[0])) /
-            afterVaultValue
-        );
-        console.log(
-          Number(ethers.utils.formatEther(afterTokenXBalance[1])) /
-            afterVaultValue
-        );
-        console.log("vault value", afterVaultValue);
-        console.log("total supply", await indexSwap.totalSupply());
-
         expect(Math.ceil((afterToken0Bal * 10) / afterVaultValue)).to.be.gte(
           (6667 * 10) / 10000
         );
@@ -628,17 +586,6 @@ describe.only("Tests for IndexSwap", () => {
           ethers.utils.formatEther(afterVaultValueBNB)
         );
 
-        console.log(
-          Number(ethers.utils.formatEther(afterTokenXBalance[0])) /
-            afterVaultValue
-        );
-        console.log(
-          Number(ethers.utils.formatEther(afterTokenXBalance[1])) /
-            afterVaultValue
-        );
-        console.log("vault value", afterVaultValue);
-        console.log("total supply", await indexSwap.totalSupply());
-
         expect(Math.ceil((afterToken0Bal * 10) / afterVaultValue)).to.be.gte(
           (5000 * 10) / 10000
         );
@@ -715,17 +662,6 @@ describe.only("Tests for IndexSwap", () => {
         const afterVaultValue = Number(
           ethers.utils.formatEther(afterVaultValueBNB)
         );
-
-        console.log(
-          Number(ethers.utils.formatEther(afterTokenXBalance[0])) /
-            afterVaultValue
-        );
-        console.log(
-          Number(ethers.utils.formatEther(afterTokenXBalance[1])) /
-            afterVaultValue
-        );
-        console.log("vault value", afterVaultValue);
-        console.log("total supply", await indexSwap.totalSupply());
 
         expect(Math.ceil((afterToken0Bal * 10) / afterVaultValue)).to.be.gte(
           (3333 * 10) / 10000
@@ -834,21 +770,6 @@ describe.only("Tests for IndexSwap", () => {
           ethers.utils.formatEther(afterVaultValueBNB)
         );
 
-        console.log(
-          Number(ethers.utils.formatEther(afterTokenXBalance[0])) /
-            afterVaultValue
-        );
-        console.log(
-          Number(ethers.utils.formatEther(afterTokenXBalance[1])) /
-            afterVaultValue
-        );
-        console.log(
-          Number(ethers.utils.formatEther(afterTokenXBalance[2])) /
-            afterVaultValue
-        );
-        console.log("vault value", afterVaultValue);
-        console.log("total supply", await indexSwap.totalSupply());
-
         expect(Math.ceil((afterETHBal * 10) / afterVaultValue)).to.be.gte(
           (2000 * 10) / 10000
         );
@@ -860,6 +781,20 @@ describe.only("Tests for IndexSwap", () => {
         );
       });
 
+      it("withdrawal should revert when contract is paused", async () => {
+        const amountIndexToken = await indexSwap.balanceOf(owner.address);
+        const updateAmount = parseInt(amountIndexToken.toString()) + 1;
+        const AMOUNT = ethers.BigNumber.from(updateAmount.toString()); //
+
+        await expect(indexSwap.withdrawFund(AMOUNT)).to.be.revertedWith(
+          "The contract is paused !"
+        );
+      });
+
+      it("should unpause", async () => {
+        await rebalancing.setPause(indexSwap.address, false);
+      });
+
       it("when withdraw fund more then balance", async () => {
         const amountIndexToken = await indexSwap.balanceOf(owner.address);
         const updateAmount = parseInt(amountIndexToken.toString()) + 1;
@@ -869,6 +804,7 @@ describe.only("Tests for IndexSwap", () => {
           indexSwap.connect(nonOwner).withdrawFund(AMOUNT)
         ).to.be.revertedWith("caller is not holding given token amount");
       });
+
       it("should withdraw fund and burn index token successfully", async () => {
         const amountIndexToken = await indexSwap.balanceOf(owner.address);
         //console.log(amountIndexToken, "amountIndexToken");
