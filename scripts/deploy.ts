@@ -67,7 +67,9 @@ async function main() {
     indexSwapLibrary.address,
     indexManager.address,
     accessController.address,
-    tokenMetadata.address
+    tokenMetadata.address,
+    "250",
+    "0x74A53d748e9BBED5380ff134889A02EffDc4345a"
   );
   await indexSwap.deployed();
 
