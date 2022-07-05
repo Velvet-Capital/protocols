@@ -166,6 +166,7 @@ contract IndexManager {
             );
             if (t == getETH()) {
                 IWETH(t).withdraw(swapAmount);
+                payable(to).transfer(swapAmount);
                 swapResult = swapAmount;
             } else {
                 swapResult = pancakeSwapRouter.swapExactTokensForETH(

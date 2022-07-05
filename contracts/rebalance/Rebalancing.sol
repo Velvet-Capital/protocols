@@ -71,12 +71,8 @@ contract Rebalancing is ReentrancyGuardUpgradeable {
     @param _index The portfolio address whose functions need to paused.
     @param _state The state is bool value which needs to input by the Index Manager.
     */
-    function setPause(
-        IndexSwap _index,
-        bool _state
-    )   public
-        onlyAssetManager {
-            _index.setPaused(_state);
+    function setPause(IndexSwap _index, bool _state) public onlyAssetManager {
+        _index.setPaused(_state);
     }
 
     /**

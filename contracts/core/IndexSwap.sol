@@ -253,7 +253,9 @@ contract IndexSwap is TokenBase {
             );
 
             if (t == indexManager.getETH()) {
-                indexManager._pullFromVault(this, t, amount, msg.sender);
+                indexManager._pullFromVault(this, t, amount, address(this));
+                IWETH(t).withdraw(amount);
+                payable(msg.sender).transfer(amount);
             } else {
                 indexManager._pullFromVault(
                     this,
