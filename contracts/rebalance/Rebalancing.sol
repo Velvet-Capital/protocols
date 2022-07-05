@@ -334,8 +334,23 @@ contract Rebalancing is ReentrancyGuardUpgradeable {
             address t = _index.getTokens()[i];
 
                 uint256 tokenBalance;
+                if (
+                    tokenMetadata.vTokens(_index.getTokens()[i]) != address(0)
+                ) {
+                    if (_index.getTokens()[i] != indexManager.getETH()) {
+                        VBep20Interface token = VBep20Interface(
+                            tokenMetadata.vTokens(_index.getTokens()[i])
+                        );
+                        tokenBalance = token.balanceOf(_index.vault());
+                    } else {
+                        IVBNB token = IVBNB(
+                            tokenMetadata.vTokens(_index.getTokens()[i])
+                        );
+                        tokenBalance = token.balanceOf(_index.vault());
+                    }
+                } else {
                     tokenBalance = IERC20(t).balanceOf(_index.vault());
-
+                }
 
                 if (t == indexManager.getETH()) {
                     indexManager._pullFromVault(
