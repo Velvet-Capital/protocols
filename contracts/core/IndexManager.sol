@@ -137,8 +137,8 @@ contract IndexManager {
         if (tokenMetadata.vTokens(t) != address(0)) {
             if (t == getETH()) {
                 redeemBNB(tokenMetadata.vTokens(t), swapAmount);
-                IERC20 token = IERC20(t);
-                swapResult = token.balanceOf(address(this));
+                swapResult = address(this).balance;
+                payable(to).transfer(swapResult);
             } else {
                 redeemToken(tokenMetadata.vTokens(t), swapAmount);
                 IERC20 token = IERC20(t);
@@ -211,7 +211,10 @@ contract IndexManager {
         TransferHelper.safeTransfer(_vAsset, _to, vBalance);
     }
 
-    function redeemToken(address _vAsset, uint256 _amount) internal {
+    function redeemToken(address _vAsset, uint256 _amount)
+        public
+        onlyIndexManager
+    {
         VBep20Interface vToken = VBep20Interface(_vAsset);
 
         require(
@@ -221,7 +224,10 @@ contract IndexManager {
         require(vToken.redeem(_amount) == 0, "redeeming vToken failed");
     }
 
-    function redeemBNB(address _vAsset, uint256 _amount) internal {
+    function redeemBNB(address _vAsset, uint256 _amount)
+        public
+        onlyIndexManager
+    {
         IVBNB vToken = IVBNB(_vAsset);
 
         require(

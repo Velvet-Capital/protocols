@@ -79,12 +79,9 @@ describe.skip("Tests for IndexFactory", () => {
       [owner, investor1, nonOwner, vault, addr1, addr2, ...addrs] = accounts;
 
       const PriceOracle = await ethers.getContractFactory("PriceOracle");
-
-      const priceProxy = await upgrades.deployProxy(PriceOracle, [
-        addresses.PancakeSwapRouterAddress,
-      ]);
-      await priceProxy.deployed();
-      priceOracle = PriceOracle.attach(priceProxy.address);
+      priceOracle = await PriceOracle.deploy();
+      await priceOracle.deployed();
+      priceOracle.initialize(addresses.PancakeSwapRouterAddress);
 
       const TokenMetadata = await ethers.getContractFactory("TokenMetadata");
       tokenMetadata = await TokenMetadata.deploy();
@@ -100,22 +97,21 @@ describe.skip("Tests for IndexFactory", () => {
       const IndexSwapLibrary = await ethers.getContractFactory(
         "IndexSwapLibrary"
       );
-      const libraryProxy = await upgrades.deployProxy(IndexSwapLibrary, [
+      indexSwapLibrary = await IndexSwapLibrary.deploy(
         priceOracle.address,
         addresses.WETH_Address,
-        tokenMetadata.address,
-      ]);
-      await libraryProxy.deployed();
-      indexSwapLibrary = IndexSwapLibrary.attach(libraryProxy.address);
+        tokenMetadata.address
+      );
+      await indexSwapLibrary.deployed();
 
       const AccessController = await ethers.getContractFactory(
         "AccessController"
       );
-      const accessController = await AccessController.deploy();
+      accessController = await AccessController.deploy();
       await accessController.deployed();
 
       const IndexManager = await ethers.getContractFactory("IndexManager");
-      const indexManager = await IndexManager.deploy(
+      indexManager = await IndexManager.deploy(
         accessController.address,
         addresses.PancakeSwapRouterAddress,
         addresses.Module,
@@ -138,7 +134,9 @@ describe.skip("Tests for IndexFactory", () => {
         addresses.Module,
         "500000000000000000000",
         indexSwapLibrary.address,
-        tokenMetadata.address
+        tokenMetadata.address,
+        "250",
+        owner.address
       );
       index.wait();
 
@@ -151,8 +149,7 @@ describe.skip("Tests for IndexFactory", () => {
       indexSwap = await IndexSwap.attach(indexAddress);
 
       const Rebalancing = await ethers.getContractFactory("Rebalancing");
-      rebalancing = await Rebalancing.deploy();
-      rebalancing.initialize(
+      rebalancing = await Rebalancing.deploy(
         indexSwapLibrary.address,
         indexManager.address,
         accessController.address,
@@ -180,7 +177,9 @@ describe.skip("Tests for IndexFactory", () => {
           addresses.Module,
           "500000000000000000000",
           addresses.IndexSwapLibrary,
-          tokenMetadata.address
+          tokenMetadata.address,
+          "250",
+          owner.address
         );
 
         console.log("index return from factory", index);

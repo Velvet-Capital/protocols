@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4 || ^0.7.6 || ^0.8.0;
 
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/token/ERC20/extensions/ERC20BurnableUpgradeable.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
@@ -22,21 +21,10 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
-contract TokenBase is
-    Initializable,
-    ERC20BurnableUpgradeable,
-    OwnableUpgradeable,
-    ReentrancyGuardUpgradeable
-{
-    function __TokenBase_init(string memory _name, string memory _symbol)
-        internal
-        initializer
-    {
-        __ERC20_init(_name, _symbol);
-        __ERC20Burnable_init();
-        __Ownable_init();
-        __ReentrancyGuard_init();
-    }
+contract TokenBase is ERC20Burnable, Ownable, ReentrancyGuard {
+    constructor(string memory _name, string memory _symbol)
+        ERC20(_name, _symbol)
+    {}
 }
 
 contract IndexSwap is TokenBase {
@@ -78,6 +66,9 @@ contract IndexSwap is TokenBase {
     AccessController public accessController;
     TokenMetadata public tokenMetadata;
 
+    uint256 public feePointBasis;
+    address public treasury;
+
     bytes32 public constant DEFAULT_ADMIN_ROLE =
         keccak256("DEFAULT_ADMIN_ROLE");
 
@@ -87,7 +78,7 @@ contract IndexSwap is TokenBase {
     bytes32 public constant INDEX_MANAGER_ROLE =
         keccak256("INDEX_MANAGER_ROLE");
 
-    function initialize(
+    constructor(
         string memory _name,
         string memory _symbol,
         address _outAsset,
@@ -96,10 +87,10 @@ contract IndexSwap is TokenBase {
         IndexSwapLibrary _indexSwapLibrary,
         IndexManager _indexManager,
         AccessController _accessController,
-        TokenMetadata _tokenMetadata
-    ) public {
-        __TokenBase_init(_name, _symbol);
-
+        TokenMetadata _tokenMetadata,
+        uint256 _feePointBasis,
+        address _treasury
+    ) TokenBase(_name, _symbol) {
         vault = _vault;
         outAsset = _outAsset; //As now we are tacking busd
         MAX_INVESTMENTAMOUNT = _maxInvestmentAmount;
@@ -108,6 +99,9 @@ contract IndexSwap is TokenBase {
         accessController = _accessController;
         tokenMetadata = _tokenMetadata;
         paused = false;
+
+        feePointBasis = _feePointBasis;
+        treasury = payable(_treasury);
 
         // OpenZeppelin Access Control
         accessController.setRoleAdmin(INDEX_MANAGER_ROLE, DEFAULT_ADMIN_ROLE);
@@ -356,6 +350,21 @@ contract IndexSwap is TokenBase {
 
     function deleteRecord(address t) public onlyRebalancerContract {
         delete _records[t];
+    }
+
+    function getTreasury() public view returns (address) {
+        return treasury;
+    }
+
+    function updateTreasury(address _newTreasury)
+        public
+        onlyRebalancerContract
+    {
+        treasury = _newTreasury;
+    }
+
+    function getFee() public view returns (uint256) {
+        return feePointBasis;
     }
 
     // important to receive ETH
