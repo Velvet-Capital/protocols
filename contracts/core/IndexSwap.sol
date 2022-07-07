@@ -248,6 +248,12 @@ contract IndexSwap is TokenBase {
 
             if (t == indexManager.getETH()) {
                 indexManager._pullFromVault(this, t, amount, address(this));
+                if (tokenMetadata.vTokens(_tokens[i]) != address(0)) {
+                    indexManager.redeemBNB(
+                        tokenMetadata.vTokens(_tokens[i]),
+                        amount
+                    );
+                }
                 IWETH(t).withdraw(amount);
                 payable(msg.sender).transfer(amount);
             } else {

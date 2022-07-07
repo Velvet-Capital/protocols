@@ -122,6 +122,17 @@ contract Rebalancing is ReentrancyGuard {
                         swapAmount,
                         address(this)
                     );
+
+                    if (
+                        tokenMetadata.vTokens(_index.getTokens()[i]) !=
+                        address(0)
+                    ) {
+                        indexManager.redeemBNB(
+                            tokenMetadata.vTokens(_index.getTokens()[i]),
+                            swapAmount
+                        );
+                    }
+
                     IWETH(_index.getTokens()[i]).withdraw(swapAmount);
                 } else {
                     indexManager._pullFromVault(
@@ -372,7 +383,7 @@ contract Rebalancing is ReentrancyGuard {
                 ) {
                     indexManager.redeemBNB(
                         tokenMetadata.vTokens(_index.getTokens()[i]),
-                        tokenBalance
+                        amount
                     );
                 }
                 IWETH(_index.getTokens()[i]).withdraw(amount);
