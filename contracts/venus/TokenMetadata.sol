@@ -8,7 +8,7 @@ import "./VBep20Storage.sol";
 contract TokenMetadata is Ownable {
     mapping(address => address) public vTokens;
 
-    function add(address _underlying, address _vToken) public {
+    function add(address _underlying, address _vToken) public onlyOwner {
         ComptrollerInterface comptroller = ComptrollerInterface(
             0xfD36E2c2a6789Db23113685031d7F16329158384
         );
@@ -20,7 +20,7 @@ contract TokenMetadata is Ownable {
         vTokens[_underlying] = _vToken;
     }
 
-    function addBNB() public {
+    function addBNB() public onlyOwner {
         require(
             vTokens[0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c] == address(0)
         );
