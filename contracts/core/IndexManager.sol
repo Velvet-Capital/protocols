@@ -8,7 +8,7 @@ import "../interfaces/IWETH.sol";
 import "../core/IndexSwapLibrary.sol";
 import "./IndexSwap.sol";
 import "../access/AccessController.sol";
-import "../vault/MyModule.sol";
+import "../vault/VelvetSafeModule.sol";
 import "../venus/VBep20Interface.sol";
 import "../venus/IVBNB.sol";
 import "../venus/TokenMetadata.sol";
@@ -16,13 +16,13 @@ import "../venus/TokenMetadata.sol";
 contract IndexManager {
     IUniswapV2Router02 public pancakeSwapRouter;
     AccessController public accessController;
-    MyModule internal gnosisSafe;
+    VelvetSafeModule internal gnosisSafe;
     TokenMetadata public tokenMetadata;
 
     constructor(
         AccessController _accessController,
         address _pancakeSwapAddress,
-        MyModule _myModule,
+        VelvetSafeModule _myModule,
         TokenMetadata _tokenMetadata
     ) {
         pancakeSwapRouter = IUniswapV2Router02(_pancakeSwapAddress);

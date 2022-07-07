@@ -147,8 +147,8 @@ describe.only("Tests for IndexSwap", () => {
       await rebalancing.deployed();
 
       if (addresses.Module != "0x0000000000000000000000000000000000000000") {
-        const MyModule = ethers.getContractFactory("MyModule");
-        let myModule = (await MyModule).attach(addresses.Module);
+        const VelvetSafeModule = ethers.getContractFactory("VelvetSafeModule");
+        let myModule = (await VelvetSafeModule).attach(addresses.Module);
         await myModule.addOwner(indexManager.address);
       }
 

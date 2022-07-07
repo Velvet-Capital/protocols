@@ -7,7 +7,7 @@ import "./core/IndexSwapLibrary.sol";
 import "./core/IndexManager.sol";
 import "./oracle/PriceOracle.sol";
 import "./rebalance/Rebalancing.sol";
-import "./vault/MyModule.sol";
+import "./vault/VelvetSafeModule.sol";
 import "./venus/TokenMetadata.sol";
 
 contract IndexFactory {
@@ -31,7 +31,7 @@ contract IndexFactory {
         address _uniswapRouter,
         address _outAsset,
         address _vault,
-        MyModule _myModule,
+        VelvetSafeModule _myModule,
         uint256 _maxInvestmentAmount,
         IndexSwapLibrary _indexSwapLibrary,
         TokenMetadata _tokenMetadata,

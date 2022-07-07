@@ -157,8 +157,8 @@ describe.skip("Tests for IndexFactory", () => {
       );
       await rebalancing.deployed();
 
-      const MyModule = ethers.getContractFactory("MyModule");
-      let myModule = (await MyModule).attach(addresses.Module);
+      const VelvetSafeModule = ethers.getContractFactory("VelvetSafeModule");
+      let myModule = (await VelvetSafeModule).attach(addresses.Module);
       await myModule.addOwner(indexManager.address);
 
       console.log("indexSwap deployed to:", indexSwap.address);
