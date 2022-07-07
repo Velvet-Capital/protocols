@@ -100,6 +100,10 @@ contract IndexSwapLibrary {
         }
     }
 
+    /**
+     * @notice The function calculates the balance of a specific token in the vault
+     * @return tokenBalance of the specific token
+     */
     function getTokenBalance(
         IndexSwap _index,
         address t,
