@@ -225,45 +225,39 @@ contract IndexSwap is TokenBase {
         _burn(msg.sender, tokenAmount);
 
         for (uint256 i = 0; i < _tokens.length; i++) {
-            address t = _tokens[i];
-            uint256 tokenBalance;
-
-            if (tokenMetadata.vTokens(t) != address(0)) {
-                if (t != indexManager.getETH()) {
-                    VBep20Interface token = VBep20Interface(
-                        tokenMetadata.vTokens(t)
-                    );
-                    tokenBalance = token.balanceOf(vault);
-                } else {
-                    IVBNB token = IVBNB(tokenMetadata.vTokens(t));
-                    tokenBalance = token.balanceOf(vault);
-                }
-            } else {
-                tokenBalance = IERC20(t).balanceOf(vault);
-            }
+            uint256 tokenBalance = indexSwapLibrary.getTokenBalance(
+                this,
+                _tokens[i],
+                indexManager.getETH() == _tokens[i]
+            );
 
             uint256 amount = tokenBalance.mul(tokenAmount).div(
                 totalSupplyIndex
             );
 
-            if (t == indexManager.getETH()) {
-                indexManager._pullFromVault(this, t, amount, address(this));
+            if (_tokens[i] == indexManager.getETH()) {
+                indexManager._pullFromVault(
+                    this,
+                    _tokens[i],
+                    amount,
+                    address(this)
+                );
                 if (tokenMetadata.vTokens(_tokens[i]) != address(0)) {
                     indexManager.redeemBNB(
                         tokenMetadata.vTokens(_tokens[i]),
                         amount
                     );
                 }
-                IWETH(t).withdraw(amount);
+                IWETH(_tokens[i]).withdraw(amount);
                 payable(msg.sender).transfer(amount);
             } else {
                 indexManager._pullFromVault(
                     this,
-                    t,
+                    _tokens[i],
                     amount,
                     address(indexManager)
                 );
-                indexManager._swapTokenToETH(t, amount, msg.sender);
+                indexManager._swapTokenToETH(_tokens[i], amount, msg.sender);
             }
         }
     }

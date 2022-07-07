@@ -100,6 +100,26 @@ contract IndexSwapLibrary {
         }
     }
 
+    function getTokenBalance(
+        IndexSwap _index,
+        address t,
+        bool weth
+    ) public view returns (uint256 tokenBalance) {
+        if (tokenMetadata.vTokens(t) != address(0)) {
+            if (weth) {
+                VBep20Interface token = VBep20Interface(
+                    tokenMetadata.vTokens(t)
+                );
+                tokenBalance = token.balanceOf(_index.vault());
+            } else {
+                IVBNB token = IVBNB(tokenMetadata.vTokens(t));
+                tokenBalance = token.balanceOf(_index.vault());
+            }
+        } else {
+            tokenBalance = IERC20(t).balanceOf(_index.vault());
+        }
+    }
+
     /**
      * @notice The function calculates the amount in BNB to swap from BNB to each token
      * @dev The amount for each token has to be calculated to ensure the ratio (weight in the portfolio) stays constant

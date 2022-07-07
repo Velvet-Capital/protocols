@@ -89,26 +89,11 @@ contract Rebalancing is ReentrancyGuard {
         // sell - swap to BNB
         for (uint256 i = 0; i < _index.getTokens().length; i++) {
             if (_newWeights[i] < _oldWeights[i]) {
-                uint256 tokenBalance;
-                if (
-                    tokenMetadata.vTokens(_index.getTokens()[i]) != address(0)
-                ) {
-                    if (_index.getTokens()[i] != indexManager.getETH()) {
-                        VBep20Interface token = VBep20Interface(
-                            tokenMetadata.vTokens(_index.getTokens()[i])
-                        );
-                        tokenBalance = token.balanceOf(_index.vault());
-                    } else {
-                        IVBNB token = IVBNB(
-                            tokenMetadata.vTokens(_index.getTokens()[i])
-                        );
-                        tokenBalance = token.balanceOf(_index.vault());
-                    }
-                } else {
-                    tokenBalance = IERC20(_index.getTokens()[i]).balanceOf(
-                        _index.vault()
-                    );
-                }
+                uint256 tokenBalance = indexSwapLibrary.getTokenBalance(
+                    _index,
+                    _index.getTokens()[i],
+                    indexManager.getETH() == _index.getTokens()[i]
+                );
 
                 uint256 weightDiff = _oldWeights[i].sub(_newWeights[i]);
                 uint256 swapAmount = tokenBalance.mul(weightDiff).div(
@@ -283,27 +268,11 @@ contract Rebalancing is ReentrancyGuard {
             for (uint256 i = 0; i < _index.getTokens().length; i++) {
                 // token removed
                 if (newDenorms[i] == 0) {
-                    uint256 tokenBalance;
-                    if (
-                        tokenMetadata.vTokens(_index.getTokens()[i]) !=
-                        address(0)
-                    ) {
-                        if (_index.getTokens()[i] != indexManager.getETH()) {
-                            VBep20Interface token = VBep20Interface(
-                                tokenMetadata.vTokens(_index.getTokens()[i])
-                            );
-                            tokenBalance = token.balanceOf(_index.vault());
-                        } else {
-                            IVBNB token = IVBNB(
-                                tokenMetadata.vTokens(_index.getTokens()[i])
-                            );
-                            tokenBalance = token.balanceOf(_index.vault());
-                        }
-                    } else {
-                        tokenBalance = IERC20(_index.getTokens()[i]).balanceOf(
-                            _index.vault()
-                        );
-                    }
+                    uint256 tokenBalance = indexSwapLibrary.getTokenBalance(
+                        _index,
+                        _index.getTokens()[i],
+                        indexManager.getETH() == _index.getTokens()[i]
+                    );
 
                     if (_index.getTokens()[i] == indexManager.getETH()) {
                         indexManager._pullFromVault(
@@ -350,24 +319,11 @@ contract Rebalancing is ReentrancyGuard {
     // Fee module
     function feeModule(IndexSwap _index) internal {
         for (uint256 i = 0; i < _index.getTokens().length; i++) {
-            uint256 tokenBalance;
-            if (tokenMetadata.vTokens(_index.getTokens()[i]) != address(0)) {
-                if (_index.getTokens()[i] != indexManager.getETH()) {
-                    VBep20Interface token = VBep20Interface(
-                        tokenMetadata.vTokens(_index.getTokens()[i])
-                    );
-                    tokenBalance = token.balanceOf(_index.vault());
-                } else {
-                    IVBNB token = IVBNB(
-                        tokenMetadata.vTokens(_index.getTokens()[i])
-                    );
-                    tokenBalance = token.balanceOf(_index.vault());
-                }
-            } else {
-                tokenBalance = IERC20(_index.getTokens()[i]).balanceOf(
-                    _index.vault()
-                );
-            }
+            uint256 tokenBalance = indexSwapLibrary.getTokenBalance(
+                _index,
+                _index.getTokens()[i],
+                indexManager.getETH() == _index.getTokens()[i]
+            );
 
             uint256 amount = tokenBalance.mul(_index.getFee()).div(10000);
 
