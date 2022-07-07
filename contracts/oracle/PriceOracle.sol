@@ -1,4 +1,14 @@
 // SPDX-License-Identifier: UNLICENSED
+
+/**
+ * @title PriceOracle
+ * @author Velvet.Capital
+ * @notice This contract is used for getting live prices of particular token and token pair 
+ * @dev This contract includes functionalities:
+ *      1. Get live prices for a particular pair
+ *      2. Get pair address for the particular token
+ */
+
 pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";

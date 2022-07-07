@@ -1,4 +1,14 @@
 // SPDX-License-Identifier: MIT
+
+/**
+ * @title IndexSwapLibrary for a particular Index
+ * @author Velvet.Capital
+ * @notice This contract is used for all the calculations and also get token balance in vault
+ * @dev This contract includes functionalities:
+ *      1. Get tokens balance in the vault
+ *      2. Calculate the swap amount needed while performing different operation
+ */
+
 pragma solidity ^0.8.4 || ^0.7.6 || ^0.8.0;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
