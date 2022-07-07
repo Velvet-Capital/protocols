@@ -4,7 +4,7 @@ pragma solidity ^0.8.4 || ^0.7.6 || ^0.8.0;
 import "./access/AccessController.sol";
 import "./core/IndexSwap.sol";
 import "./core/IndexSwapLibrary.sol";
-import "./core/IndexManager.sol";
+import "./core/Adapter.sol";
 import "./oracle/PriceOracle.sol";
 import "./rebalance/Rebalancing.sol";
 import "./vault/VelvetSafeModule.sol";
@@ -19,7 +19,7 @@ contract IndexFactory {
         address _vault,
         uint256 _maxInvestmentAmount,
         IndexSwapLibrary _indexSwapLibrary,
-        IndexManager _indexManager,
+        Adapter _adapter,
         AccessController _accessController
     );
 
@@ -42,7 +42,7 @@ contract IndexFactory {
         AccessController _accessController = new AccessController();
 
         // Index Manager
-        IndexManager _indexManager = new IndexManager(
+        Adapter _adapter = new Adapter(
             _accessController,
             _uniswapRouter,
             _myModule,
@@ -57,7 +57,7 @@ contract IndexFactory {
             _vault,
             _maxInvestmentAmount,
             _indexSwapLibrary,
-            _indexManager,
+            _adapter,
             _accessController,
             _tokenMetadata,
             _feePointBasis,
@@ -72,14 +72,14 @@ contract IndexFactory {
             _vault,
             _maxInvestmentAmount,
             _indexSwapLibrary,
-            _indexManager,
+            _adapter,
             _accessController
         );
 
         // Rebalancing
         Rebalancing rebalancing = new Rebalancing(
             _indexSwapLibrary,
-            _indexManager,
+            _adapter,
             _accessController,
             _tokenMetadata
         );

@@ -7,7 +7,7 @@ import {
   PriceOracle,
   IERC20__factory,
   IndexSwapLibrary,
-  IndexManager,
+  Adapter,
   Rebalancing,
   AccessController,
   TokenMetadata,
@@ -23,7 +23,7 @@ describe.only("Tests for IndexSwap", () => {
   let priceOracle: PriceOracle;
   let indexSwap: IndexSwap;
   let indexSwapLibrary: IndexSwapLibrary;
-  let indexManager: IndexManager;
+  let adapter: Adapter;
   let rebalancing: Rebalancing;
   let tokenMetadata: TokenMetadata;
   let accessController: AccessController;
@@ -112,14 +112,14 @@ describe.only("Tests for IndexSwap", () => {
       const accessController = await AccessController.deploy();
       await accessController.deployed();
 
-      const IndexManager = await ethers.getContractFactory("IndexManager");
-      indexManager = await IndexManager.deploy(
+      const Adapter = await ethers.getContractFactory("Adapter");
+      adapter = await Adapter.deploy(
         accessController.address,
         addresses.PancakeSwapRouterAddress,
         addresses.Module,
         tokenMetadata.address
       );
-      await indexManager.deployed();
+      await adapter.deployed();
 
       const IndexSwap = await ethers.getContractFactory("IndexSwap");
       indexSwap = await IndexSwap.deploy(
@@ -129,7 +129,7 @@ describe.only("Tests for IndexSwap", () => {
         addresses.Vault,
         "500000000000000000000",
         indexSwapLibrary.address,
-        indexManager.address,
+        adapter.address,
         accessController.address,
         tokenMetadata.address,
         "250",
@@ -140,7 +140,7 @@ describe.only("Tests for IndexSwap", () => {
       const Rebalancing = await ethers.getContractFactory("Rebalancing");
       rebalancing = await Rebalancing.deploy(
         indexSwapLibrary.address,
-        indexManager.address,
+        adapter.address,
         accessController.address,
         tokenMetadata.address
       );
@@ -149,24 +149,18 @@ describe.only("Tests for IndexSwap", () => {
       if (addresses.Module != "0x0000000000000000000000000000000000000000") {
         const VelvetSafeModule = ethers.getContractFactory("VelvetSafeModule");
         let myModule = (await VelvetSafeModule).attach(addresses.Module);
-        await myModule.addOwner(indexManager.address);
+        await myModule.addOwner(adapter.address);
       }
 
       await busdInstance
         .connect(vault)
-        .approve(indexManager.address, approve_amount);
+        .approve(adapter.address, approve_amount);
       await wbnbInstance
         .connect(vault)
-        .approve(indexManager.address, approve_amount);
-      await daiInstance
-        .connect(vault)
-        .approve(indexManager.address, approve_amount);
-      await ethInstance
-        .connect(vault)
-        .approve(indexManager.address, approve_amount);
-      await btcInstance
-        .connect(vault)
-        .approve(indexManager.address, approve_amount);
+        .approve(adapter.address, approve_amount);
+      await daiInstance.connect(vault).approve(adapter.address, approve_amount);
+      await ethInstance.connect(vault).approve(adapter.address, approve_amount);
+      await btcInstance.connect(vault).approve(adapter.address, approve_amount);
 
       console.log("indexSwap deployed to:", indexSwap.address);
     });

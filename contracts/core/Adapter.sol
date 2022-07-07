@@ -13,7 +13,7 @@ import "../venus/VBep20Interface.sol";
 import "../venus/IVBNB.sol";
 import "../venus/TokenMetadata.sol";
 
-contract IndexManager {
+contract Adapter {
     IUniswapV2Router02 public pancakeSwapRouter;
     AccessController public accessController;
     VelvetSafeModule internal gnosisSafe;

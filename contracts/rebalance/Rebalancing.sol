@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
 import "../core/IndexSwapLibrary.sol";
-import "../core/IndexManager.sol";
+import "../core/Adapter.sol";
 import "../core/IndexSwap.sol";
 import "../access/AccessController.sol";
 import "../venus/IVBNB.sol";
@@ -17,7 +17,7 @@ contract Rebalancing is ReentrancyGuard {
         keccak256("ASSET_MANAGER_ROLE");
 
     IndexSwapLibrary public indexSwapLibrary;
-    IndexManager public indexManager;
+    Adapter public adapter;
 
     AccessController public accessController;
     TokenMetadata public tokenMetadata;
@@ -26,12 +26,12 @@ contract Rebalancing is ReentrancyGuard {
 
     constructor(
         IndexSwapLibrary _indexSwapLibrary,
-        IndexManager _indexManager,
+        Adapter _adapter,
         AccessController _accessController,
         TokenMetadata _tokenMetadata
     ) {
         indexSwapLibrary = _indexSwapLibrary;
-        indexManager = _indexManager;
+        adapter = _adapter;
         accessController = _accessController;
         tokenMetadata = _tokenMetadata;
 
@@ -92,7 +92,7 @@ contract Rebalancing is ReentrancyGuard {
                 uint256 tokenBalance = indexSwapLibrary.getTokenBalance(
                     _index,
                     _index.getTokens()[i],
-                    indexManager.getETH() == _index.getTokens()[i]
+                    adapter.getETH() == _index.getTokens()[i]
                 );
 
                 uint256 weightDiff = _oldWeights[i].sub(_newWeights[i]);
@@ -100,8 +100,8 @@ contract Rebalancing is ReentrancyGuard {
                     _oldWeights[i]
                 );
 
-                if (_index.getTokens()[i] == indexManager.getETH()) {
-                    indexManager._pullFromVault(
+                if (_index.getTokens()[i] == adapter.getETH()) {
+                    adapter._pullFromVault(
                         _index,
                         _index.getTokens()[i],
                         swapAmount,
@@ -112,7 +112,7 @@ contract Rebalancing is ReentrancyGuard {
                         tokenMetadata.vTokens(_index.getTokens()[i]) !=
                         address(0)
                     ) {
-                        indexManager.redeemBNB(
+                        adapter.redeemBNB(
                             tokenMetadata.vTokens(_index.getTokens()[i]),
                             swapAmount
                         );
@@ -120,13 +120,13 @@ contract Rebalancing is ReentrancyGuard {
 
                     IWETH(_index.getTokens()[i]).withdraw(swapAmount);
                 } else {
-                    indexManager._pullFromVault(
+                    adapter._pullFromVault(
                         _index,
                         _index.getTokens()[i],
                         swapAmount,
-                        address(indexManager)
+                        address(adapter)
                     );
-                    indexManager._swapTokenToETH(
+                    adapter._swapTokenToETH(
                         _index.getTokens()[i],
                         swapAmount,
                         address(this)
@@ -160,7 +160,7 @@ contract Rebalancing is ReentrancyGuard {
                     sumWeightsToSwap
                 );
 
-                indexManager._swapETHToToken{value: swapAmount}(
+                adapter._swapETHToToken{value: swapAmount}(
                     _index.getTokens()[i],
                     swapAmount,
                     _index.vault()
@@ -271,11 +271,11 @@ contract Rebalancing is ReentrancyGuard {
                     uint256 tokenBalance = indexSwapLibrary.getTokenBalance(
                         _index,
                         _index.getTokens()[i],
-                        indexManager.getETH() == _index.getTokens()[i]
+                        adapter.getETH() == _index.getTokens()[i]
                     );
 
-                    if (_index.getTokens()[i] == indexManager.getETH()) {
-                        indexManager._pullFromVault(
+                    if (_index.getTokens()[i] == adapter.getETH()) {
+                        adapter._pullFromVault(
                             _index,
                             _index.getTokens()[i],
                             tokenBalance,
@@ -285,20 +285,20 @@ contract Rebalancing is ReentrancyGuard {
                             tokenMetadata.vTokens(_index.getTokens()[i]) !=
                             address(0)
                         ) {
-                            indexManager.redeemBNB(
+                            adapter.redeemBNB(
                                 tokenMetadata.vTokens(_index.getTokens()[i]),
                                 tokenBalance
                             );
                         }
                         IWETH(_index.getTokens()[i]).withdraw(tokenBalance);
                     } else {
-                        indexManager._pullFromVault(
+                        adapter._pullFromVault(
                             _index,
                             _index.getTokens()[i],
                             tokenBalance,
-                            address(indexManager)
+                            address(adapter)
                         );
-                        indexManager._swapTokenToETH(
+                        adapter._swapTokenToETH(
                             _index.getTokens()[i],
                             tokenBalance,
                             address(this)
@@ -322,13 +322,13 @@ contract Rebalancing is ReentrancyGuard {
             uint256 tokenBalance = indexSwapLibrary.getTokenBalance(
                 _index,
                 _index.getTokens()[i],
-                indexManager.getETH() == _index.getTokens()[i]
+                adapter.getETH() == _index.getTokens()[i]
             );
 
             uint256 amount = tokenBalance.mul(_index.getFee()).div(10000);
 
-            if (_index.getTokens()[i] == indexManager.getETH()) {
-                indexManager._pullFromVault(
+            if (_index.getTokens()[i] == adapter.getETH()) {
+                adapter._pullFromVault(
                     _index,
                     _index.getTokens()[i],
                     amount,
@@ -337,7 +337,7 @@ contract Rebalancing is ReentrancyGuard {
                 if (
                     tokenMetadata.vTokens(_index.getTokens()[i]) != address(0)
                 ) {
-                    indexManager.redeemBNB(
+                    adapter.redeemBNB(
                         tokenMetadata.vTokens(_index.getTokens()[i]),
                         amount
                     );
@@ -345,13 +345,13 @@ contract Rebalancing is ReentrancyGuard {
                 IWETH(_index.getTokens()[i]).withdraw(amount);
                 payable(_index.getTreasury()).transfer(amount);
             } else {
-                indexManager._pullFromVault(
+                adapter._pullFromVault(
                     _index,
                     _index.getTokens()[i],
                     amount,
-                    address(indexManager)
+                    address(adapter)
                 );
-                indexManager._swapTokenToETH(
+                adapter._swapTokenToETH(
                     _index.getTokens()[i],
                     amount,
                     _index.getTreasury()

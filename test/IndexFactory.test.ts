@@ -7,7 +7,7 @@ import {
   IERC20__factory,
   IndexFactory,
   IndexSwapLibrary,
-  IndexManager,
+  Adapter,
   AccessController,
   Rebalancing,
   TokenMetadata,
@@ -23,7 +23,7 @@ describe.skip("Tests for IndexFactory", () => {
   let indexSwap: IndexSwap;
   let indexFactory: IndexFactory;
   let indexSwapLibrary: IndexSwapLibrary;
-  let indexManager: IndexManager;
+  let adapter: Adapter;
   let rebalancing: Rebalancing;
   let accessController: AccessController;
   let tokenMetadata: TokenMetadata;
@@ -110,14 +110,14 @@ describe.skip("Tests for IndexFactory", () => {
       accessController = await AccessController.deploy();
       await accessController.deployed();
 
-      const IndexManager = await ethers.getContractFactory("IndexManager");
-      indexManager = await IndexManager.deploy(
+      const Adapter = await ethers.getContractFactory("Adapter");
+      adapter = await Adapter.deploy(
         accessController.address,
         addresses.PancakeSwapRouterAddress,
         addresses.Module,
         tokenMetadata.address
       );
-      await indexManager.deployed();
+      await adapter.deployed();
 
       const IndexFactory = await ethers.getContractFactory("IndexFactory");
       indexFactory = await IndexFactory.deploy();
@@ -151,7 +151,7 @@ describe.skip("Tests for IndexFactory", () => {
       const Rebalancing = await ethers.getContractFactory("Rebalancing");
       rebalancing = await Rebalancing.deploy(
         indexSwapLibrary.address,
-        indexManager.address,
+        adapter.address,
         accessController.address,
         tokenMetadata.address
       );
@@ -159,7 +159,7 @@ describe.skip("Tests for IndexFactory", () => {
 
       const VelvetSafeModule = ethers.getContractFactory("VelvetSafeModule");
       let myModule = (await VelvetSafeModule).attach(addresses.Module);
-      await myModule.addOwner(indexManager.address);
+      await myModule.addOwner(adapter.address);
 
       console.log("indexSwap deployed to:", indexSwap.address);
     });
