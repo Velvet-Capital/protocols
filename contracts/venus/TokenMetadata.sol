@@ -1,4 +1,12 @@
 // SPDX-License-Identifier: BSD-3-Clause
+/**
+ * @title TokenMetadata for a particular Index
+ * @author Velvet.Capital
+ * @notice This contract is used for adding venus tokens along with their underlying assets as a pair
+ * @dev This contract includes functionalities:
+ *      1. Add venus tokens along with their underlying asset
+ */
+
 pragma solidity ^0.8.4 || ^0.7.6 || ^0.8.0;
 
 import "./ComptrollerInterface.sol";
