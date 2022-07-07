@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: BSD-3-Clause
 pragma solidity ^0.8.4 || ^0.7.6 || ^0.8.0;
 
+import "@openzeppelin/contracts/access/Ownable.sol";
 import "./ComptrollerInterface.sol";
 import "./VBep20Storage.sol";
 
-contract TokenMetadata {
+contract TokenMetadata is Ownable {
     mapping(address => address) public vTokens;
 
     function add(address _underlying, address _vToken) public {
