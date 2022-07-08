@@ -27,10 +27,6 @@ import "../venus/IVBNB.sol";
 import "../venus/VBep20Interface.sol";
 import "../venus/TokenMetadata.sol";
 
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
-
 contract TokenBase is ERC20Burnable, Ownable, ReentrancyGuard {
     constructor(string memory _name, string memory _symbol)
         ERC20(_name, _symbol)
@@ -79,15 +75,6 @@ contract IndexSwap is TokenBase {
     uint256 public feePointBasis;
     address public treasury;
 
-    bytes32 public constant DEFAULT_ADMIN_ROLE =
-        keccak256("DEFAULT_ADMIN_ROLE");
-
-    bytes32 public constant ASSET_MANAGER_ROLE =
-        keccak256("ASSET_MANAGER_ROLE");
-
-    bytes32 public constant INDEX_MANAGER_ROLE =
-        keccak256("INDEX_MANAGER_ROLE");
-
     constructor(
         string memory _name,
         string memory _symbol,
@@ -114,8 +101,14 @@ contract IndexSwap is TokenBase {
         treasury = payable(_treasury);
 
         // OpenZeppelin Access Control
-        accessController.setRoleAdmin(INDEX_MANAGER_ROLE, DEFAULT_ADMIN_ROLE);
-        accessController.setupRole(INDEX_MANAGER_ROLE, address(this));
+        accessController.setRoleAdmin(
+            keccak256("INDEX_MANAGER_ROLE"),
+            keccak256("DEFAULT_ADMIN_ROLE")
+        );
+        accessController.setupRole(
+            keccak256("INDEX_MANAGER_ROLE"),
+            address(this)
+        );
     }
 
     /** @dev Emitted when public trades are enabled. */

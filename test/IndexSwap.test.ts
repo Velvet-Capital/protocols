@@ -228,11 +228,11 @@ describe.only("Tests for IndexSwap", () => {
         );
       });
 
-      it("Invest 20BNB into Top10 fund", async () => {
+      it("Invest 2BNB into Top10 fund", async () => {
         const indexSupplyBefore = await indexSwap.totalSupply();
         //console.log("0.2bnb before", indexSupplyBefore);
         await indexSwap.investInFund({
-          value: "20000000000000000000",
+          value: "2000000000000000000",
         });
         const indexSupplyAfter = await indexSwap.totalSupply();
 

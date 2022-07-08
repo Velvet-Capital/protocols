@@ -29,9 +29,6 @@ contract IndexSwapLibrary {
 
     using SafeMath for uint256;
 
-    bytes32 public constant ASSET_MANAGER_ROLE =
-        keccak256("ASSET_MANAGER_ROLE");
-
     constructor(
         address _oracle,
         address _weth,
