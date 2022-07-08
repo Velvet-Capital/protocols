@@ -21,7 +21,7 @@ import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
 import "../interfaces/IWETH.sol";
 import "./IndexSwapLibrary.sol";
-import "./IndexManager.sol";
+import "./Adapter.sol";
 import "../access/AccessController.sol";
 import "../venus/IVBNB.sol";
 import "../venus/VBep20Interface.sol";
@@ -72,7 +72,7 @@ contract IndexSwap is TokenBase {
 
     address public outAsset;
     IndexSwapLibrary public indexSwapLibrary;
-    IndexManager public indexManager;
+    Adapter public adapter;
     AccessController public accessController;
     TokenMetadata public tokenMetadata;
 
@@ -95,7 +95,7 @@ contract IndexSwap is TokenBase {
         address _vault,
         uint256 _maxInvestmentAmount,
         IndexSwapLibrary _indexSwapLibrary,
-        IndexManager _indexManager,
+        Adapter _adapter,
         AccessController _accessController,
         TokenMetadata _tokenMetadata,
         uint256 _feePointBasis,
@@ -105,7 +105,7 @@ contract IndexSwap is TokenBase {
         outAsset = _outAsset; //As now we are tacking busd
         MAX_INVESTMENTAMOUNT = _maxInvestmentAmount;
         indexSwapLibrary = IndexSwapLibrary(_indexSwapLibrary);
-        indexManager = IndexManager(_indexManager);
+        adapter = Adapter(_adapter);
         accessController = _accessController;
         tokenMetadata = _tokenMetadata;
         paused = false;
@@ -235,39 +235,34 @@ contract IndexSwap is TokenBase {
         _burn(msg.sender, tokenAmount);
 
         for (uint256 i = 0; i < _tokens.length; i++) {
-            address t = _tokens[i];
-            uint256 tokenBalance;
-
-            if (tokenMetadata.vTokens(t) != address(0)) {
-                if (t != indexManager.getETH()) {
-                    VBep20Interface token = VBep20Interface(
-                        tokenMetadata.vTokens(t)
-                    );
-                    tokenBalance = token.balanceOf(vault);
-                } else {
-                    IVBNB token = IVBNB(tokenMetadata.vTokens(t));
-                    tokenBalance = token.balanceOf(vault);
-                }
-            } else {
-                tokenBalance = IERC20(t).balanceOf(vault);
-            }
+            uint256 tokenBalance = indexSwapLibrary.getTokenBalance(
+                this,
+                _tokens[i],
+                adapter.getETH() == _tokens[i]
+            );
 
             uint256 amount = tokenBalance.mul(tokenAmount).div(
                 totalSupplyIndex
             );
 
-            if (t == indexManager.getETH()) {
-                indexManager._pullFromVault(this, t, amount, address(this));
-                IWETH(t).withdraw(amount);
+            if (_tokens[i] == adapter.getETH()) {
+                adapter._pullFromVault(this, _tokens[i], amount, address(this));
+                if (tokenMetadata.vTokens(_tokens[i]) != address(0)) {
+                    adapter.redeemBNB(
+                        tokenMetadata.vTokens(_tokens[i]),
+                        amount
+                    );
+                }
+                IWETH(_tokens[i]).withdraw(amount);
                 payable(msg.sender).transfer(amount);
             } else {
-                indexManager._pullFromVault(
+                adapter._pullFromVault(
                     this,
-                    t,
+                    _tokens[i],
                     amount,
-                    address(indexManager)
+                    address(adapter)
                 );
-                indexManager._swapTokenToETH(t, amount, msg.sender);
+                adapter._swapTokenToETH(_tokens[i], amount, msg.sender);
             }
         }
     }
@@ -294,9 +289,11 @@ contract IndexSwap is TokenBase {
 
             require(address(this).balance >= swapAmount, "not enough bnb");
 
-            uint256 swapResult = indexManager._swapETHToToken{
-                value: swapAmount
-            }(t, swapAmount, vault);
+            uint256 swapResult = adapter._swapETHToToken{value: swapAmount}(
+                t,
+                swapAmount,
+                vault
+            );
 
             investedAmountAfterSlippage = investedAmountAfterSlippage.add(
                 indexSwapLibrary._getTokenAmountInBNB(this, t, swapResult)

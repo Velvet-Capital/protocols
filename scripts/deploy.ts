@@ -47,14 +47,14 @@ async function main() {
   await indexSwapLibrary.deployed();
 
   // Index Manager
-  const IndexManager = await ethers.getContractFactory("IndexManager");
-  const indexManager = await IndexManager.deploy(
+  const Adapter = await ethers.getContractFactory("Adapter");
+  const adapter = await Adapter.deploy(
     accessController.address,
     addresses.PancakeSwapRouterAddress,
     addresses.Module,
     tokenMetadata.address
   );
-  await indexManager.deployed();
+  await adapter.deployed();
 
   // Index Swap
   const IndexSwap = await ethers.getContractFactory("IndexSwap");
@@ -65,7 +65,7 @@ async function main() {
     addresses.Vault,
     "500000000000000000000",
     indexSwapLibrary.address,
-    indexManager.address,
+    adapter.address,
     accessController.address,
     tokenMetadata.address,
     "250",
@@ -76,13 +76,13 @@ async function main() {
   const Rebalancing = await ethers.getContractFactory("Rebalancing");
   const rebalancing = await Rebalancing.deploy(
     indexSwapLibrary.address,
-    indexManager.address,
+    adapter.address,
     accessController.address,
     tokenMetadata.address
   );
   await rebalancing.deployed();
 
-  console.log(`IndexManager deployed to: ${indexManager.address}`);
+  console.log(`Adapter deployed to: ${adapter.address}`);
   console.log(`IndexSwap deployed to: ${indexSwap.address}`);
   console.log(`Rebalancing deployed to: ${rebalancing.address}`);
 }

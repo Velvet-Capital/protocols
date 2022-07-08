@@ -16,7 +16,7 @@ interface InputData {
     function transfer(address _to, uint256 _value) external;
 }
 
-contract MyModule is Module {
+contract VelvetSafeModule is Module {
     address public moduleOwner;
 
     mapping(address => bool) public owners;
