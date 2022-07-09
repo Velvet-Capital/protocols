@@ -37,6 +37,9 @@ contract Rebalancing is ReentrancyGuard {
 
     using SafeMath for uint256;
 
+    uint256 internal lastRebalanced;
+    uint256 internal lastFeeCharged;
+
     constructor(
         IndexSwapLibrary _indexSwapLibrary,
         Adapter _adapter,
@@ -202,6 +205,8 @@ contract Rebalancing is ReentrancyGuard {
 
         uint256 sumWeightsToSwap = sellTokens(_index, oldWeights, newWeights);
         buyTokens(_index, oldWeights, newWeights, sumWeightsToSwap);
+
+        lastRebalanced = block.timestamp;
     }
 
     /**
@@ -216,7 +221,6 @@ contract Rebalancing is ReentrancyGuard {
             denorms.length == _index.getTokens().length,
             "Lengths don't match"
         );
-        feeModule(_index);
         _index.updateRecords(_index.getTokens(), denorms);
         rebalance(_index);
     }
@@ -260,7 +264,6 @@ contract Rebalancing is ReentrancyGuard {
             totalWeight = totalWeight.add(denorms[i]);
         }
         require(totalWeight == _index.TOTAL_WEIGHT(), "INVALID_WEIGHTS");
-        feeModule(_index);
 
         uint256[] memory newDenorms = evaluateNewDenorms(
             _index,
@@ -323,7 +326,11 @@ contract Rebalancing is ReentrancyGuard {
     }
 
     // Fee module
-    function feeModule(IndexSwap _index) internal {
+    function feeModule(IndexSwap _index) public {
+        require(
+            lastFeeCharged < lastRebalanced,
+            "Fee has already been charged after the last rebalancing!"
+        );
         for (uint256 i = 0; i < _index.getTokens().length; i++) {
             uint256 tokenBalance = indexSwapLibrary.getTokenBalance(
                 _index,
@@ -366,6 +373,8 @@ contract Rebalancing is ReentrancyGuard {
                 );
             }
         }
+
+        lastFeeCharged = block.timestamp;
     }
 
     function updateTreasury(IndexSwap _index, address _newAddress)

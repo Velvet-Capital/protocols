@@ -123,8 +123,8 @@ async function main() {
       "0x0e09fabb73bd3ade0a17ecc321fd13a19e81ce82",
       "0x8ff795a6f4d97e7887c79bea79aba5cc76444adf",
       "0x0d8ce2a99bb6e3b7db580ed848240e4a0f9ae153",
-    ], // FIL
-    [1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000]
+    ],
+    [1500, 500, 1000, 1000, 1000, 1000, 1000, 1000, 1000, 1000]
   );
 
   const Rebalancing = await ethers.getContractFactory("Rebalancing");
