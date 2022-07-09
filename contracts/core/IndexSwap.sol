@@ -101,10 +101,6 @@ contract IndexSwap is TokenBase {
         treasury = payable(_treasury);
 
         // OpenZeppelin Access Control
-        accessController.setRoleAdmin(
-            keccak256("INDEX_MANAGER_ROLE"),
-            keccak256("DEFAULT_ADMIN_ROLE")
-        );
         accessController.setupRole(
             keccak256("INDEX_MANAGER_ROLE"),
             address(this)

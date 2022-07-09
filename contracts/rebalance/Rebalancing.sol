@@ -4,9 +4,9 @@
  * @title Rebalancing for a particular Index
  * @author Velvet.Capital
  * @notice This contract is used by asset manager to update weights, update tokens and call pause function. It also
- *         includes the feeModule logic. 
+ *         includes the feeModule logic.
  * @dev This contract includes functionalities:
- *      1. Pause the IndexSwap contract 
+ *      1. Pause the IndexSwap contract
  *      2. Update the token list
  *      3. Update the token weight
  *      4. Update the treasury address
@@ -50,16 +50,8 @@ contract Rebalancing is ReentrancyGuard {
 
         // OpenZeppelin Access Control
         accessController.setupRole(keccak256("DEFAULT_ADMIN_ROLE"), msg.sender);
-        accessController.setRoleAdmin(
-            keccak256("ASSET_MANAGER_ROLE"),
-            keccak256("DEFAULT_ADMIN_ROLE")
-        );
         accessController.setupRole(keccak256("ASSET_MANAGER_ROLE"), msg.sender);
 
-        accessController.setRoleAdmin(
-            keccak256("INDEX_MANAGER_ROLE"),
-            keccak256("DEFAULT_ADMIN_ROLE")
-        );
         accessController.setupRole(
             keccak256("INDEX_MANAGER_ROLE"),
             address(this)
