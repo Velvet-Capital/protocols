@@ -241,8 +241,10 @@ contract IndexSwap is TokenBase {
                         tokenMetadata.vTokens(_tokens[i]),
                         amount
                     );
+                } else {
+                    IWETH(_tokens[i]).withdraw(amount);
                 }
-                IWETH(_tokens[i]).withdraw(amount);
+
                 payable(msg.sender).transfer(amount);
             } else {
                 adapter._pullFromVault(

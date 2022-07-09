@@ -121,9 +121,9 @@ contract Rebalancing is ReentrancyGuard {
                             tokenMetadata.vTokens(_index.getTokens()[i]),
                             swapAmount
                         );
+                    } else {
+                        IWETH(_index.getTokens()[i]).withdraw(swapAmount);
                     }
-
-                    IWETH(_index.getTokens()[i]).withdraw(swapAmount);
                 } else {
                     adapter._pullFromVault(
                         _index,
@@ -294,8 +294,9 @@ contract Rebalancing is ReentrancyGuard {
                                 tokenMetadata.vTokens(_index.getTokens()[i]),
                                 tokenBalance
                             );
+                        } else {
+                            IWETH(_index.getTokens()[i]).withdraw(tokenBalance);
                         }
-                        IWETH(_index.getTokens()[i]).withdraw(tokenBalance);
                     } else {
                         adapter._pullFromVault(
                             _index,
@@ -346,8 +347,10 @@ contract Rebalancing is ReentrancyGuard {
                         tokenMetadata.vTokens(_index.getTokens()[i]),
                         amount
                     );
+                } else {
+                    IWETH(_index.getTokens()[i]).withdraw(amount);
                 }
-                IWETH(_index.getTokens()[i]).withdraw(amount);
+
                 payable(_index.getTreasury()).transfer(amount);
             } else {
                 adapter._pullFromVault(
