@@ -148,8 +148,10 @@ describe.only("Tests for IndexSwap", () => {
 
       if (addresses.Module != "0x0000000000000000000000000000000000000000") {
         const VelvetSafeModule = ethers.getContractFactory("VelvetSafeModule");
-        let myModule = (await VelvetSafeModule).attach(addresses.Module);
-        await myModule.addOwner(adapter.address);
+        let velvetSafeModule = (await VelvetSafeModule).attach(
+          addresses.Module
+        );
+        await velvetSafeModule.addOwner(adapter.address);
       }
 
       await busdInstance

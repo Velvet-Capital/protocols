@@ -35,12 +35,12 @@ contract Adapter {
     constructor(
         AccessController _accessController,
         address _pancakeSwapAddress,
-        VelvetSafeModule _myModule,
+        VelvetSafeModule _velvetSafeModule,
         TokenMetadata _tokenMetadata
     ) {
         pancakeSwapRouter = IUniswapV2Router02(_pancakeSwapAddress);
         accessController = _accessController;
-        gnosisSafe = _myModule;
+        gnosisSafe = _velvetSafeModule;
         tokenMetadata = _tokenMetadata;
     }
 

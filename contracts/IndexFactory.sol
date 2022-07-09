@@ -31,7 +31,7 @@ contract IndexFactory {
         address _uniswapRouter,
         address _outAsset,
         address _vault,
-        VelvetSafeModule _myModule,
+        VelvetSafeModule _velvetSafeModule,
         uint256 _maxInvestmentAmount,
         IndexSwapLibrary _indexSwapLibrary,
         TokenMetadata _tokenMetadata,
@@ -45,7 +45,7 @@ contract IndexFactory {
         Adapter _adapter = new Adapter(
             _accessController,
             _uniswapRouter,
-            _myModule,
+            _velvetSafeModule,
             _tokenMetadata
         );
 
