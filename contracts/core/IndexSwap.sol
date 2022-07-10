@@ -239,13 +239,13 @@ contract IndexSwap is TokenBase {
                 if (tokenMetadata.vTokens(_tokens[i]) != address(0)) {
                     adapter.redeemBNB(
                         tokenMetadata.vTokens(_tokens[i]),
-                        amount
+                        amount,
+                        msg.sender
                     );
                 } else {
                     IWETH(_tokens[i]).withdraw(amount);
+                    payable(msg.sender).transfer(amount);
                 }
-
-                payable(msg.sender).transfer(amount);
             } else {
                 adapter._pullFromVault(
                     this,

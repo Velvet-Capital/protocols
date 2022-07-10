@@ -16,6 +16,7 @@ pragma solidity ^0.8.4 || ^0.7.6 || ^0.8.0;
 
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
+import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
 
 import "../core/IndexSwapLibrary.sol";
 import "../core/Adapter.sol";
@@ -122,7 +123,8 @@ contract Rebalancing is ReentrancyGuard {
                     ) {
                         adapter.redeemBNB(
                             tokenMetadata.vTokens(_index.getTokens()[i]),
-                            swapAmount
+                            swapAmount,
+                            address(this)
                         );
                     } else {
                         IWETH(_index.getTokens()[i]).withdraw(swapAmount);
@@ -180,7 +182,11 @@ contract Rebalancing is ReentrancyGuard {
     /**
      * @notice The function rebalances the token weights in the portfolio
      */
-    function rebalance(IndexSwap _index) public onlyAssetManager nonReentrant {
+    function rebalance(IndexSwap _index)
+        internal
+        onlyAssetManager
+        nonReentrant
+    {
         require(_index.totalSupply() > 0);
 
         uint256 vaultBalance = 0;
@@ -295,7 +301,8 @@ contract Rebalancing is ReentrancyGuard {
                         ) {
                             adapter.redeemBNB(
                                 tokenMetadata.vTokens(_index.getTokens()[i]),
-                                tokenBalance
+                                tokenBalance,
+                                _index.getTreasury()
                             );
                         } else {
                             IWETH(_index.getTokens()[i]).withdraw(tokenBalance);
@@ -326,7 +333,7 @@ contract Rebalancing is ReentrancyGuard {
     }
 
     // Fee module
-    function feeModule(IndexSwap _index) public {
+    function feeModule(IndexSwap _index) public onlyAssetManager {
         require(
             lastFeeCharged < lastRebalanced,
             "Fee has already been charged after the last rebalancing!"
@@ -352,25 +359,38 @@ contract Rebalancing is ReentrancyGuard {
                 ) {
                     adapter.redeemBNB(
                         tokenMetadata.vTokens(_index.getTokens()[i]),
-                        amount
+                        amount,
+                        _index.getTreasury()
                     );
                 } else {
                     IWETH(_index.getTokens()[i]).withdraw(amount);
+                    payable(_index.getTreasury()).transfer(amount);
                 }
-
-                payable(_index.getTreasury()).transfer(amount);
             } else {
-                adapter._pullFromVault(
-                    _index,
-                    _index.getTokens()[i],
-                    amount,
-                    address(adapter)
-                );
-                adapter._swapTokenToETH(
-                    _index.getTokens()[i],
-                    amount,
-                    _index.getTreasury()
-                );
+                if (
+                    tokenMetadata.vTokens(_index.getTokens()[i]) != address(0)
+                ) {
+                    adapter._pullFromVault(
+                        _index,
+                        _index.getTokens()[i],
+                        amount,
+                        address(adapter)
+                    );
+
+                    adapter.redeemToken(
+                        tokenMetadata.vTokens(_index.getTokens()[i]),
+                        _index.getTokens()[i],
+                        amount,
+                        _index.getTreasury()
+                    );
+                } else {
+                    adapter._pullFromVault(
+                        _index,
+                        _index.getTokens()[i],
+                        amount,
+                        _index.getTreasury()
+                    );
+                }
             }
         }
 

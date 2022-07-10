@@ -90,10 +90,7 @@ describe.only("Tests for IndexSwap", () => {
           "0xf508fCD89b8bd15579dc79A6827cB4686A3592c8"
         );
 
-        tokenMetadata.add(
-          wbnbInstance.address,
-          "0xA07c5b74C9B40447a954e1466938b865b6BBea36"
-        );
+        tokenMetadata.addBNB();
       }
 
       const IndexSwapLibrary = await ethers.getContractFactory(
@@ -245,6 +242,16 @@ describe.only("Tests for IndexSwap", () => {
           vaultBalance = receipt.events[1].args.vaultValue;
         }
 
+        if (
+          receipt.events &&
+          receipt.events[2] &&
+          receipt.events[2].args &&
+          receipt.events[2].args.tokenBalances
+        ) {
+          tokenBalances = receipt.events[2].args.tokenBalances;
+          vaultBalance = receipt.events[2].args.vaultValue;
+        }
+
         bnbBefore = Number(vaultBalance);
 
         expect(Number(indexSupplyAfter)).to.be.greaterThanOrEqual(
@@ -288,6 +295,16 @@ describe.only("Tests for IndexSwap", () => {
           vaultBalance = receipt.events[1].args.vaultValue;
         }
 
+        if (
+          receipt.events &&
+          receipt.events[2] &&
+          receipt.events[2].args &&
+          receipt.events[2].args.tokenBalances
+        ) {
+          tokenBalances = receipt.events[2].args.tokenBalances;
+          vaultBalance = receipt.events[2].args.vaultValue;
+        }
+
         bnbAfter = Number(vaultBalance);
 
         expect(Number(indexSupplyAfter)).to.be.greaterThanOrEqual(
@@ -313,59 +330,6 @@ describe.only("Tests for IndexSwap", () => {
         );
       });
 
-      it("Print values", async () => {
-        let afterTokenXBalance;
-        let afterVaultValueBNB;
-
-        const valuesAfter = await indexSwapLibrary.getTokenAndVaultBalance(
-          indexSwap.address
-        );
-        const receiptAfter = await valuesAfter.wait();
-
-        if (
-          receiptAfter.events &&
-          receiptAfter.events[0] &&
-          receiptAfter.events[0].args &&
-          receiptAfter.events[0].args.tokenBalances
-        ) {
-          afterTokenXBalance = receiptAfter.events[0].args.tokenBalances;
-          afterVaultValueBNB = receiptAfter.events[0].args.vaultValue;
-        }
-
-        if (
-          receiptAfter.events &&
-          receiptAfter.events[1] &&
-          receiptAfter.events[1].args &&
-          receiptAfter.events[1].args.tokenBalances
-        ) {
-          afterTokenXBalance = receiptAfter.events[1].args.tokenBalances;
-          afterVaultValueBNB = receiptAfter.events[1].args.vaultValue;
-        }
-
-        const afterToken0Bal = Number(
-          ethers.utils.formatEther(afterTokenXBalance[0])
-        );
-        const afterToken1Bal = Number(
-          ethers.utils.formatEther(afterTokenXBalance[1])
-        );
-        const afterVaultValue = Number(
-          ethers.utils.formatEther(afterVaultValueBNB)
-        );
-        console.log("After last investment");
-        console.log("tokens", afterTokenXBalance);
-        console.log("vault", afterVaultValue);
-        console.log(
-          Number(ethers.utils.formatEther(afterTokenXBalance[0])) /
-            afterVaultValue
-        );
-        console.log(
-          Number(ethers.utils.formatEther(afterTokenXBalance[1])) /
-            afterVaultValue
-        );
-        console.log("vault value", afterVaultValue);
-        console.log("total supply", await indexSwap.totalSupply());
-      });
-
       it("Investment should fail when contract is paused", async () => {
         await rebalancing.setPause(indexSwap.address, true);
         await expect(
@@ -373,12 +337,6 @@ describe.only("Tests for IndexSwap", () => {
             value: "1000000000000000000",
           })
         ).to.be.reverted;
-      });
-
-      it("should revert when Rebalance is called from an account which is not assigned as asset manager", async () => {
-        await expect(
-          rebalancing.connect(nonOwner).rebalance(indexSwap.address)
-        ).to.be.revertedWith("Caller is not an Asset Manager");
       });
 
       it("update Weights should revert if total Weights not equal 10,000", async () => {

@@ -309,12 +309,6 @@ describe.skip("Tests for IndexFactory", () => {
         );
       });
 
-      it("should revert when Rebalance is called from an account which is not assigned as asset manager", async () => {
-        await expect(
-          rebalancing.connect(nonOwner).rebalance(indexSwap.address)
-        ).to.be.revertedWith("Caller is not an Asset Manager");
-      });
-
       it("updateWeights should revert if total Weights not equal 10,000", async () => {
         await expect(
           rebalancing.updateWeights(indexSwap.address, [100, 200])
