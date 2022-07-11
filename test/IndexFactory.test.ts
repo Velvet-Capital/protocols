@@ -11,13 +11,14 @@ import {
   AccessController,
   Rebalancing,
   TokenMetadata,
+  VelvetSafeModule,
 } from "../typechain";
 import { chainIdToAddresses } from "../scripts/networkVariables";
 
 //use default BigNumber
 // chai.use(require("chai-bignumber")());
 
-describe.skip("Tests for IndexFactory", () => {
+describe.only("Tests for IndexFactory", () => {
   let accounts;
   let priceOracle: PriceOracle;
   let indexSwap: IndexSwap;
@@ -70,9 +71,9 @@ describe.skip("Tests for IndexFactory", () => {
     IERC20__factory.abi,
     ethers.getDefaultProvider()
   );
-  // const wbnbInstance.address =addresses.WETH_Address;
-  // const btcInstance.address = addresses.BTC_Address;
-  // const ethInstance.address = addresses.ETH_Address;
+
+  let velvetSafeModule: VelvetSafeModule;
+
   describe.only("Tests for IndexFactory contract", () => {
     before(async () => {
       accounts = await ethers.getSigners();
@@ -110,11 +111,17 @@ describe.skip("Tests for IndexFactory", () => {
       accessController = await AccessController.deploy();
       await accessController.deployed();
 
+      const VelvetSafeModule = await ethers.getContractFactory(
+        "VelvetSafeModule"
+      );
+      velvetSafeModule = await VelvetSafeModule.deploy(owner.address);
+      await velvetSafeModule.deployed();
+
       const Adapter = await ethers.getContractFactory("Adapter");
       adapter = await Adapter.deploy(
         accessController.address,
         addresses.PancakeSwapRouterAddress,
-        addresses.Module,
+        velvetSafeModule.address,
         tokenMetadata.address
       );
       await adapter.deployed();
@@ -131,7 +138,7 @@ describe.skip("Tests for IndexFactory", () => {
         addresses.PancakeSwapRouterAddress,
         addresses.WETH_Address,
         addresses.Vault,
-        addresses.Module,
+        velvetSafeModule.address,
         "500000000000000000000",
         indexSwapLibrary.address,
         tokenMetadata.address,
@@ -157,47 +164,43 @@ describe.skip("Tests for IndexFactory", () => {
       );
       await rebalancing.deployed();
 
-      const VelvetSafeModule = ethers.getContractFactory("VelvetSafeModule");
-      let velvetSafeModule = (await VelvetSafeModule).attach(addresses.Module);
+      // const VelvetSafeModule = await ethers.getContractFactory(
+      //   "VelvetSafeModule"
+      // );
+      // let velvetSafeModule = VelvetSafeModule.attach(addresses.Module);
       await velvetSafeModule.addOwner(adapter.address);
 
       console.log("indexSwap deployed to:", indexSwap.address);
     });
 
     describe("IndexFactory Contract", function () {
-      it("init", async () => {
+      it.only("init", async () => {
         let indexAddress = "";
-
         const index = await indexFactory.createIndex(
           "INDEXLY",
           "IDX",
           addresses.PancakeSwapRouterAddress,
           addresses.WETH_Address,
           addresses.Vault,
-          addresses.Module,
+          velvetSafeModule.address,
           "500000000000000000000",
           addresses.IndexSwapLibrary,
           tokenMetadata.address,
           "250",
           owner.address
         );
-
         console.log("index return from factory", index);
-
         const result = index.to;
         if (result) {
           indexAddress = result.toString();
         }
-
         const IndexSwap = await ethers.getContractFactory("IndexSwap");
         indexSwap = await IndexSwap.attach(indexAddress);
       });
 
       it("Initialize IndexFund Tokens", async () => {
         console.log(indexSwap.address);
-      });
 
-      it("Initialize IndexFund Tokens", async () => {
         await indexSwap
           .connect(owner)
           .init([busdInstance.address, ethInstance.address], [1, 1]);

@@ -52,7 +52,7 @@ const config: HardhatUserConfig = {
           : `https://bsc-dataseed.binance.org`,
       },
       // chainId: chainIds.hardhat,
-      // allowUnlimitedContractSize: true
+      allowUnlimitedContractSize: true,
     },
     ganache: {
       chainId: 5777,

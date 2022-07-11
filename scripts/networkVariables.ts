@@ -42,7 +42,7 @@ export const BSCTestNet: ChainAddresses = {
 };
 
 export const BSCMainNet: ChainAddresses = {
-  RpcUrl: `https://bsc-dataseed.binance.org/`,
+  RpcUrl: `https://bscrpc.com`,
   PancakeSwapRouterAddress: "0x10ED43C718714eb63d5aA57B78B54704E256024E",
   PancakeSwapV2RouterAddress: "0x10ED43C718714eb63d5aA57B78B54704E256024E",
   PancakeSwapV2FactoryAddress: "0xca143ce32fe78f1f7019d7d551a6402fc5350c73",
