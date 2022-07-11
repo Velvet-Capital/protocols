@@ -9,7 +9,7 @@
  *      2. Calculate the swap amount needed while performing different operation
  */
 
-pragma solidity ^0.8.4 || ^0.7.6 || ^0.8.0;
+pragma solidity 0.8.6;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
