@@ -38,6 +38,14 @@ contract IndexFactory {
         uint256 _feePointBasis,
         address _treasury
     ) public returns (IndexSwap index) {
+        require(_uniswapRouter != address(0), "Invalid Router");
+        require(_outAsset != address(0), "Invalid Out Asset");
+        require(_vault != address(0), "Invalid Vault");
+        require(address(_velvetSafeModule) != address(0), "Invalid Module");
+        require(address(_indexSwapLibrary) != address(0), "Invalid SwapLib");
+        require(address(_tokenMetadata) != address(0), "Invalid TokenMetadata");
+        require(address(_treasury) != address(0), "Invalid Treasury");
+
         // Access Controller
         AccessController _accessController = new AccessController();
 
