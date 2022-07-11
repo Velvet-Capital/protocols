@@ -176,7 +176,7 @@ describe.only("Tests for IndexFactory", () => {
     describe("IndexFactory Contract", function () {
       it.only("init", async () => {
         let indexAddress = "";
-        const index = await indexFactory.createIndex(
+        const createIndex = await indexFactory.createIndex(
           "INDEXLY",
           "IDX",
           addresses.PancakeSwapRouterAddress,
@@ -189,21 +189,22 @@ describe.only("Tests for IndexFactory", () => {
           "250",
           owner.address
         );
-        console.log("index return from factory", index);
-        const result = index.to;
-        if (result) {
-          indexAddress = result.toString();
-        }
+        const res = await createIndex.wait();
+        const event = res.events?.find((e) => e.event === "IndexCreation");
+        indexAddress = event?.args?.index;
+
         const IndexSwap = await ethers.getContractFactory("IndexSwap");
         indexSwap = await IndexSwap.attach(indexAddress);
       });
 
-      it("Initialize IndexFund Tokens", async () => {
+      it.only("Initialize IndexFund Tokens", async () => {
         console.log(indexSwap.address);
 
-        await indexSwap
-          .connect(owner)
-          .init([busdInstance.address, ethInstance.address], [1, 1]);
+        await indexFactory.initializeTokens(
+          indexSwap.address,
+          [busdInstance.address, ethInstance.address],
+          [5000, 5000]
+        );
       });
 
       it("Invest 0.1BNB into Top10 fund", async () => {
