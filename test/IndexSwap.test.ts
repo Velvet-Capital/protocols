@@ -11,8 +11,24 @@ import {
   Rebalancing,
   AccessController,
   TokenMetadata,
+  VelvetSafeModule,
 } from "../typechain";
+
 import { chainIdToAddresses } from "../scripts/networkVariables";
+
+import Safe, {
+  SafeFactory,
+  SafeAccountConfig,
+  ContractNetworksConfig,
+} from "@gnosis.pm/safe-core-sdk";
+import EthersAdapter from "@gnosis.pm/safe-ethers-lib";
+import {
+  SafeTransactionDataPartial,
+  GnosisSafeContract,
+  SafeVersion,
+} from "@gnosis.pm/safe-core-sdk-types";
+
+import { getSafeContract } from "@gnosis.pm/safe-core-sdk/dist/src/contracts/safeDeploymentContracts";
 
 var chai = require("chai");
 //use default BigNumber
@@ -27,6 +43,8 @@ describe.only("Tests for IndexSwap", () => {
   let rebalancing: Rebalancing;
   let tokenMetadata: TokenMetadata;
   let accessController: AccessController;
+  let velvetSafeModule: VelvetSafeModule;
+  let gnosisSafeContract: GnosisSafeContract;
   let txObject;
   let owner: SignerWithAddress;
   let nonOwner: SignerWithAddress;
@@ -44,6 +62,7 @@ describe.only("Tests for IndexSwap", () => {
   const addresses = chainIdToAddresses[chainId];
   var bnbBefore = 0;
   var bnbAfter = 0;
+  let safeAddress = "0x";
 
   const wbnbInstance = new ethers.Contract(
     addresses.WETH_Address,
@@ -75,6 +94,87 @@ describe.only("Tests for IndexSwap", () => {
     before(async () => {
       accounts = await ethers.getSigners();
       [owner, investor1, nonOwner, vault, addr1, addr2, ...addrs] = accounts;
+
+      const provider = ethers.getDefaultProvider();
+      const safeOwner = owner;
+
+      const ethAdapter = new EthersAdapter({
+        ethers,
+        signer: safeOwner,
+      });
+
+      const id = await ethAdapter.getChainId();
+      const contractNetworks: ContractNetworksConfig = {
+        [id]: {
+          multiSendAddress: "0xA238CBeb142c10Ef7Ad8442C6D1f9E89e07e7761",
+          safeMasterCopyAddress: "0xd9Db270c1B5E3Bd161E8c8503c55cEABeE709552",
+          safeProxyFactoryAddress: "0xa6B71E26C5e0845f74c812102Ca7114b6a896AB2",
+        },
+      };
+
+      const safeFactory = await SafeFactory.create({
+        ethAdapter,
+        contractNetworks,
+        isL1SafeMasterCopy: true,
+      });
+
+      const owners = [owner.address];
+      const threshold = 1;
+      const safeAccountConfig: SafeAccountConfig = {
+        owners,
+        threshold,
+      };
+
+      const safeSdk: Safe = await safeFactory.deploySafe({ safeAccountConfig });
+      const newSafeAddress = safeSdk.getAddress();
+      safeAddress = newSafeAddress;
+      console.log("Safe deployed to: ", newSafeAddress);
+
+      const VelvetSafeModule = await ethers.getContractFactory(
+        "VelvetSafeModule"
+      );
+      velvetSafeModule = await VelvetSafeModule.deploy(newSafeAddress);
+      await velvetSafeModule.deployed();
+      console.log("VelvetSafeModule deployed to: ", velvetSafeModule.address);
+
+      let ABI = ["function enableModule(address module)"];
+      let abiEncode = new ethers.utils.Interface(ABI);
+      let txData = abiEncode.encodeFunctionData("enableModule", [
+        velvetSafeModule.address,
+      ]);
+
+      const transaction: SafeTransactionDataPartial = {
+        to: safeAddress,
+        value: "0",
+        data: txData,
+        operation: 0,
+        safeTxGas: 0,
+        baseGas: 0,
+        gasPrice: 0,
+        gasToken: "0x0000000000000000000000000000000000000000",
+        refundReceiver: "0x0000000000000000000000000000000000000000",
+      };
+      const safeTransaction = await safeSdk.createTransaction(transaction);
+
+      const ethAdapterOwner2 = new EthersAdapter({ ethers, signer: owner });
+      const safeSdk2 = await safeSdk.connect({
+        ethAdapter: ethAdapterOwner2,
+        safeAddress,
+      });
+      const txHash = await safeSdk2.getTransactionHash(safeTransaction);
+      const approveTxResponse = await safeSdk2.approveTransactionHash(txHash);
+      await approveTxResponse.transactionResponse?.wait();
+
+      const ethAdapterOwner3 = new EthersAdapter({ ethers, signer: owner });
+      const safeSdk3 = await safeSdk2.connect({
+        ethAdapter: ethAdapterOwner3,
+        safeAddress,
+      });
+      const executeTxResponse = await safeSdk3.executeTransaction(
+        safeTransaction
+      );
+      await executeTxResponse.transactionResponse?.wait();
+
       const PriceOracle = await ethers.getContractFactory("PriceOracle");
       priceOracle = await PriceOracle.deploy();
       await priceOracle.deployed();
@@ -113,7 +213,7 @@ describe.only("Tests for IndexSwap", () => {
       adapter = await Adapter.deploy(
         accessController.address,
         addresses.PancakeSwapRouterAddress,
-        addresses.Module,
+        velvetSafeModule.address,
         tokenMetadata.address
       );
       await adapter.deployed();
@@ -123,7 +223,7 @@ describe.only("Tests for IndexSwap", () => {
         "INDEXLY",
         "IDX",
         addresses.WETH_Address,
-        addresses.Vault,
+        safeAddress,
         "500000000000000000000",
         indexSwapLibrary.address,
         adapter.address,
@@ -143,11 +243,9 @@ describe.only("Tests for IndexSwap", () => {
       );
       await rebalancing.deployed();
 
-      if (addresses.Module != "0x0000000000000000000000000000000000000000") {
-        const VelvetSafeModule = ethers.getContractFactory("VelvetSafeModule");
-        let velvetSafeModule = (await VelvetSafeModule).attach(
-          addresses.Module
-        );
+      if (
+        velvetSafeModule.address != "0x0000000000000000000000000000000000000000"
+      ) {
         await velvetSafeModule.addOwner(adapter.address);
       }
 
