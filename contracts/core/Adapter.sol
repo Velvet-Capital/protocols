@@ -149,11 +149,16 @@ contract Adapter {
     ) public onlyIndexManager returns (uint256 swapResult) {
         if (tokenMetadata.vTokens(t) != address(0)) {
             if (t == getETH()) {
-                redeemBNB(tokenMetadata.vTokens(t), swapAmount);
+                redeemBNB(tokenMetadata.vTokens(t), swapAmount, address(this));
                 swapResult = address(this).balance;
                 payable(to).transfer(swapResult);
             } else {
-                redeemToken(tokenMetadata.vTokens(t), swapAmount);
+                redeemToken(
+                    tokenMetadata.vTokens(t),
+                    t,
+                    swapAmount,
+                    address(this)
+                );
                 IERC20 token = IERC20(t);
                 uint256 amount = token.balanceOf(address(this));
                 require(amount > 0, "zero balance amount");
@@ -224,10 +229,12 @@ contract Adapter {
         TransferHelper.safeTransfer(_vAsset, _to, vBalance);
     }
 
-    function redeemToken(address _vAsset, uint256 _amount)
-        public
-        onlyIndexManager
-    {
+    function redeemToken(
+        address _vAsset,
+        address _underlying,
+        uint256 _amount,
+        address _to
+    ) public onlyIndexManager {
         VBep20Interface vToken = VBep20Interface(_vAsset);
 
         require(
@@ -235,12 +242,19 @@ contract Adapter {
             "not enough balance in venus protocol"
         );
         require(vToken.redeem(_amount) == 0, "redeeming vToken failed");
+
+        if (_to != address(this)) {
+            IERC20 token = IERC20(_underlying);
+            uint256 tokenAmount = token.balanceOf(address(this));
+            TransferHelper.safeTransfer(_underlying, _to, tokenAmount);
+        }
     }
 
-    function redeemBNB(address _vAsset, uint256 _amount)
-        public
-        onlyIndexManager
-    {
+    function redeemBNB(
+        address _vAsset,
+        uint256 _amount,
+        address _to
+    ) public onlyIndexManager {
         IVBNB vToken = IVBNB(_vAsset);
 
         require(
@@ -248,6 +262,11 @@ contract Adapter {
             "not enough balance in venus protocol"
         );
         require(vToken.redeem(_amount) == 0, "redeeming vToken failed");
+
+        if (_to != address(this)) {
+            uint256 tokenAmount = address(this).balance;
+            payable(_to).transfer(tokenAmount);
+        }
     }
 
     /**

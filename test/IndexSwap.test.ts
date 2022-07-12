@@ -11,8 +11,24 @@ import {
   Rebalancing,
   AccessController,
   TokenMetadata,
+  VelvetSafeModule,
 } from "../typechain";
+
 import { chainIdToAddresses } from "../scripts/networkVariables";
+
+import Safe, {
+  SafeFactory,
+  SafeAccountConfig,
+  ContractNetworksConfig,
+} from "@gnosis.pm/safe-core-sdk";
+import EthersAdapter from "@gnosis.pm/safe-ethers-lib";
+import {
+  SafeTransactionDataPartial,
+  GnosisSafeContract,
+  SafeVersion,
+} from "@gnosis.pm/safe-core-sdk-types";
+
+import { getSafeContract } from "@gnosis.pm/safe-core-sdk/dist/src/contracts/safeDeploymentContracts";
 
 var chai = require("chai");
 //use default BigNumber
@@ -27,6 +43,8 @@ describe.only("Tests for IndexSwap", () => {
   let rebalancing: Rebalancing;
   let tokenMetadata: TokenMetadata;
   let accessController: AccessController;
+  let velvetSafeModule: VelvetSafeModule;
+  let gnosisSafeContract: GnosisSafeContract;
   let txObject;
   let owner: SignerWithAddress;
   let nonOwner: SignerWithAddress;
@@ -44,6 +62,7 @@ describe.only("Tests for IndexSwap", () => {
   const addresses = chainIdToAddresses[chainId];
   var bnbBefore = 0;
   var bnbAfter = 0;
+  let safeAddress = "0x";
 
   const wbnbInstance = new ethers.Contract(
     addresses.WETH_Address,
@@ -75,6 +94,87 @@ describe.only("Tests for IndexSwap", () => {
     before(async () => {
       accounts = await ethers.getSigners();
       [owner, investor1, nonOwner, vault, addr1, addr2, ...addrs] = accounts;
+
+      const provider = ethers.getDefaultProvider();
+      const safeOwner = owner;
+
+      const ethAdapter = new EthersAdapter({
+        ethers,
+        signer: safeOwner,
+      });
+
+      const id = await ethAdapter.getChainId();
+      const contractNetworks: ContractNetworksConfig = {
+        [id]: {
+          multiSendAddress: addresses.MULTI_SEND_ADDRESS,
+          safeMasterCopyAddress: addresses.SAFE_MASTER_COPY_ADDRESS,
+          safeProxyFactoryAddress: addresses.SAFE_PROXY_FACTORY_ADDRESS,
+        },
+      };
+
+      const safeFactory = await SafeFactory.create({
+        ethAdapter,
+        contractNetworks,
+        isL1SafeMasterCopy: true,
+      });
+
+      const owners = [owner.address];
+      const threshold = 1;
+      const safeAccountConfig: SafeAccountConfig = {
+        owners,
+        threshold,
+      };
+
+      const safeSdk: Safe = await safeFactory.deploySafe({ safeAccountConfig });
+      const newSafeAddress = safeSdk.getAddress();
+      safeAddress = newSafeAddress;
+      console.log("Safe deployed to: ", newSafeAddress);
+
+      const VelvetSafeModule = await ethers.getContractFactory(
+        "VelvetSafeModule"
+      );
+      velvetSafeModule = await VelvetSafeModule.deploy(newSafeAddress);
+      await velvetSafeModule.deployed();
+      console.log("VelvetSafeModule deployed to: ", velvetSafeModule.address);
+
+      let ABI = ["function enableModule(address module)"];
+      let abiEncode = new ethers.utils.Interface(ABI);
+      let txData = abiEncode.encodeFunctionData("enableModule", [
+        velvetSafeModule.address,
+      ]);
+
+      const transaction: SafeTransactionDataPartial = {
+        to: safeAddress,
+        value: "0",
+        data: txData,
+        operation: 0,
+        safeTxGas: 0,
+        baseGas: 0,
+        gasPrice: 0,
+        gasToken: "0x0000000000000000000000000000000000000000",
+        refundReceiver: "0x0000000000000000000000000000000000000000",
+      };
+      const safeTransaction = await safeSdk.createTransaction(transaction);
+
+      const ethAdapterOwner2 = new EthersAdapter({ ethers, signer: owner });
+      const safeSdk2 = await safeSdk.connect({
+        ethAdapter: ethAdapterOwner2,
+        safeAddress,
+      });
+      const txHash = await safeSdk2.getTransactionHash(safeTransaction);
+      const approveTxResponse = await safeSdk2.approveTransactionHash(txHash);
+      await approveTxResponse.transactionResponse?.wait();
+
+      const ethAdapterOwner3 = new EthersAdapter({ ethers, signer: owner });
+      const safeSdk3 = await safeSdk2.connect({
+        ethAdapter: ethAdapterOwner3,
+        safeAddress,
+      });
+      const executeTxResponse = await safeSdk3.executeTransaction(
+        safeTransaction
+      );
+      await executeTxResponse.transactionResponse?.wait();
+
       const PriceOracle = await ethers.getContractFactory("PriceOracle");
       priceOracle = await PriceOracle.deploy();
       await priceOracle.deployed();
@@ -90,10 +190,7 @@ describe.only("Tests for IndexSwap", () => {
           "0xf508fCD89b8bd15579dc79A6827cB4686A3592c8"
         );
 
-        tokenMetadata.add(
-          wbnbInstance.address,
-          "0xA07c5b74C9B40447a954e1466938b865b6BBea36"
-        );
+        tokenMetadata.addBNB();
       }
 
       const IndexSwapLibrary = await ethers.getContractFactory(
@@ -116,7 +213,7 @@ describe.only("Tests for IndexSwap", () => {
       adapter = await Adapter.deploy(
         accessController.address,
         addresses.PancakeSwapRouterAddress,
-        addresses.Module,
+        velvetSafeModule.address,
         tokenMetadata.address
       );
       await adapter.deployed();
@@ -126,13 +223,13 @@ describe.only("Tests for IndexSwap", () => {
         "INDEXLY",
         "IDX",
         addresses.WETH_Address,
-        addresses.Vault,
+        safeAddress,
         "500000000000000000000",
         indexSwapLibrary.address,
         adapter.address,
         accessController.address,
         tokenMetadata.address,
-        "100",
+        "1",
         owner.address
       );
       await indexSwap.deployed();
@@ -146,11 +243,9 @@ describe.only("Tests for IndexSwap", () => {
       );
       await rebalancing.deployed();
 
-      if (addresses.Module != "0x0000000000000000000000000000000000000000") {
-        const VelvetSafeModule = ethers.getContractFactory("VelvetSafeModule");
-        let velvetSafeModule = (await VelvetSafeModule).attach(
-          addresses.Module
-        );
+      if (
+        velvetSafeModule.address != "0x0000000000000000000000000000000000000000"
+      ) {
         await velvetSafeModule.addOwner(adapter.address);
       }
 
@@ -176,13 +271,13 @@ describe.only("Tests for IndexSwap", () => {
         await expect(
           indexSwap.init(
             [busdInstance.address, ethInstance.address],
-            [5000, 1000]
+            [100, 1000]
           )
         ).to.be.revertedWith("INVALID_WEIGHTS");
       });
       it("Initialize IndexFund Tokens", async () => {
         await indexSwap.init(
-          [wbnbInstance.address, ethInstance.address],
+          [busdInstance.address, ethInstance.address],
           [5000, 5000]
         );
       });
@@ -198,7 +293,9 @@ describe.only("Tests for IndexSwap", () => {
         const valuesAfter = await indexSwapLibrary.getTokenAndVaultBalance(
           indexSwap.address
         );
+
         const receipt = await valuesAfter.wait();
+        console.log(receipt);
 
         let vaultBalance;
         let tokenBalances;
@@ -221,6 +318,26 @@ describe.only("Tests for IndexSwap", () => {
         ) {
           tokenBalances = receipt.events[1].args.tokenBalances;
           vaultBalance = receipt.events[1].args.vaultValue;
+        }
+
+        if (
+          receipt.events &&
+          receipt.events[2] &&
+          receipt.events[2].args &&
+          receipt.events[2].args.tokenBalances
+        ) {
+          tokenBalances = receipt.events[2].args.tokenBalances;
+          vaultBalance = receipt.events[2].args.vaultValue;
+        }
+
+        if (
+          receipt.events &&
+          receipt.events[3] &&
+          receipt.events[3].args &&
+          receipt.events[3].args.tokenBalances
+        ) {
+          tokenBalances = receipt.events[3].args.tokenBalances;
+          vaultBalance = receipt.events[3].args.vaultValue;
         }
 
         bnbBefore = Number(vaultBalance);
@@ -238,43 +355,9 @@ describe.only("Tests for IndexSwap", () => {
         });
         const indexSupplyAfter = await indexSwap.totalSupply();
 
-        const valuesAfter = await indexSwapLibrary.getTokenAndVaultBalance(
-          indexSwap.address
-        );
-        const receipt = await valuesAfter.wait();
-
-        let vaultBalance;
-        let tokenBalances;
-
-        if (
-          receipt.events &&
-          receipt.events[0] &&
-          receipt.events[0].args &&
-          receipt.events[0].args.tokenBalances
-        ) {
-          tokenBalances = receipt.events[0].args.tokenBalances;
-          vaultBalance = receipt.events[0].args.vaultValue;
-        }
-
-        if (
-          receipt.events &&
-          receipt.events[1] &&
-          receipt.events[1].args &&
-          receipt.events[1].args.tokenBalances
-        ) {
-          tokenBalances = receipt.events[1].args.tokenBalances;
-          vaultBalance = receipt.events[1].args.vaultValue;
-        }
-
-        bnbAfter = Number(vaultBalance);
-
         expect(Number(indexSupplyAfter)).to.be.greaterThanOrEqual(
           Number(indexSupplyBefore)
         );
-      });
-
-      it("BNB amount increases after investing", async () => {
-        expect(bnbAfter).to.be.gt(bnbBefore);
       });
 
       it("Invest 1BNB into Top10 fund", async () => {
@@ -291,59 +374,6 @@ describe.only("Tests for IndexSwap", () => {
         );
       });
 
-      it("Print values", async () => {
-        let afterTokenXBalance;
-        let afterVaultValueBNB;
-
-        const valuesAfter = await indexSwapLibrary.getTokenAndVaultBalance(
-          indexSwap.address
-        );
-        const receiptAfter = await valuesAfter.wait();
-
-        if (
-          receiptAfter.events &&
-          receiptAfter.events[0] &&
-          receiptAfter.events[0].args &&
-          receiptAfter.events[0].args.tokenBalances
-        ) {
-          afterTokenXBalance = receiptAfter.events[0].args.tokenBalances;
-          afterVaultValueBNB = receiptAfter.events[0].args.vaultValue;
-        }
-
-        if (
-          receiptAfter.events &&
-          receiptAfter.events[1] &&
-          receiptAfter.events[1].args &&
-          receiptAfter.events[1].args.tokenBalances
-        ) {
-          afterTokenXBalance = receiptAfter.events[1].args.tokenBalances;
-          afterVaultValueBNB = receiptAfter.events[1].args.vaultValue;
-        }
-
-        const afterToken0Bal = Number(
-          ethers.utils.formatEther(afterTokenXBalance[0])
-        );
-        const afterToken1Bal = Number(
-          ethers.utils.formatEther(afterTokenXBalance[1])
-        );
-        const afterVaultValue = Number(
-          ethers.utils.formatEther(afterVaultValueBNB)
-        );
-        console.log("After last investment");
-        console.log("tokens", afterTokenXBalance);
-        console.log("vault", afterVaultValue);
-        console.log(
-          Number(ethers.utils.formatEther(afterTokenXBalance[0])) /
-            afterVaultValue
-        );
-        console.log(
-          Number(ethers.utils.formatEther(afterTokenXBalance[1])) /
-            afterVaultValue
-        );
-        console.log("vault value", afterVaultValue);
-        console.log("total supply", await indexSwap.totalSupply());
-      });
-
       it("Investment should fail when contract is paused", async () => {
         await rebalancing.setPause(indexSwap.address, true);
         await expect(
@@ -353,261 +383,34 @@ describe.only("Tests for IndexSwap", () => {
         ).to.be.reverted;
       });
 
-      it("should revert when Rebalance is called from an account which is not assigned as asset manager", async () => {
-        await expect(
-          rebalancing.connect(nonOwner).rebalance(indexSwap.address)
-        ).to.be.revertedWith("Caller is not an Asset Manager");
-      });
-
       it("update Weights should revert if total Weights not equal 10,000", async () => {
         await expect(
-          rebalancing.updateWeights(indexSwap.address, [100, 200])
+          rebalancing.updateWeights(indexSwap.address, [6667, 3330])
         ).to.be.revertedWith("INVALID_WEIGHTS");
       });
 
-      it("should Update Weights and Rebalance", async () => {
-        let beforeTokenXBalance;
-        let beforeVaultValue;
-
-        const values = await indexSwapLibrary.getTokenAndVaultBalance(
-          indexSwap.address
+      it("should revert to charge fees", async () => {
+        await expect(
+          rebalancing.feeModule(indexSwap.address)
+        ).to.be.revertedWith(
+          "Fee has already been charged after the last rebalancing!"
         );
-        const receipt = await values.wait();
+      });
 
-        if (
-          receipt.events &&
-          receipt.events[0] &&
-          receipt.events[0].args &&
-          receipt.events[0].args.tokenBalances
-        ) {
-          beforeTokenXBalance = receipt.events[0].args.tokenBalances;
-          beforeVaultValue = receipt.events[0].args.vaultValue;
-        }
-
-        if (
-          receipt.events &&
-          receipt.events[1] &&
-          receipt.events[1].args &&
-          receipt.events[1].args.tokenBalances
-        ) {
-          beforeTokenXBalance = receipt.events[1].args.tokenBalances;
-          beforeVaultValue = receipt.events[1].args.vaultValue;
-        }
-
+      it("should Update Weights and Rebalance", async () => {
         await rebalancing.updateWeights(indexSwap.address, [6667, 3333]);
-
-        let afterTokenXBalance;
-        let afterVaultValueBNB;
-
-        const valuesAfter = await indexSwapLibrary.getTokenAndVaultBalance(
-          indexSwap.address
-        );
-        const receiptAfter = await valuesAfter.wait();
-
-        if (
-          receiptAfter.events &&
-          receiptAfter.events[0] &&
-          receiptAfter.events[0].args &&
-          receiptAfter.events[0].args.tokenBalances
-        ) {
-          afterTokenXBalance = receiptAfter.events[0].args.tokenBalances;
-          afterVaultValueBNB = receiptAfter.events[0].args.vaultValue;
-        }
-
-        if (
-          receiptAfter.events &&
-          receiptAfter.events[1] &&
-          receiptAfter.events[1].args &&
-          receiptAfter.events[1].args.tokenBalances
-        ) {
-          afterTokenXBalance = receiptAfter.events[1].args.tokenBalances;
-          afterVaultValueBNB = receiptAfter.events[1].args.vaultValue;
-        }
-
-        const afterToken0Bal = Number(
-          ethers.utils.formatEther(afterTokenXBalance[0])
-        );
-        const afterToken1Bal = Number(
-          ethers.utils.formatEther(afterTokenXBalance[1])
-        );
-        const afterVaultValue = Number(
-          ethers.utils.formatEther(afterVaultValueBNB)
-        );
-
-        expect(Math.ceil((afterToken0Bal * 10) / afterVaultValue)).to.be.gte(
-          (6667 * 10) / 10000
-        );
-        expect(Math.ceil((afterToken1Bal * 10) / afterVaultValue)).to.be.gte(
-          (3333 * 10) / 10000
-        );
       });
 
       it("should Update Weights and Rebalance", async () => {
-        let beforeTokenXBalance;
-        let beforeVaultValue;
-
-        const values = await indexSwapLibrary.getTokenAndVaultBalance(
-          indexSwap.address
-        );
-        const receipt = await values.wait();
-
-        if (
-          receipt.events &&
-          receipt.events[0] &&
-          receipt.events[0].args &&
-          receipt.events[0].args.tokenBalances
-        ) {
-          beforeTokenXBalance = receipt.events[0].args.tokenBalances;
-          beforeVaultValue = receipt.events[0].args.vaultValue;
-        }
-
-        if (
-          receipt.events &&
-          receipt.events[1] &&
-          receipt.events[1].args &&
-          receipt.events[1].args.tokenBalances
-        ) {
-          beforeTokenXBalance = receipt.events[1].args.tokenBalances;
-          beforeVaultValue = receipt.events[1].args.vaultValue;
-        }
-
         await rebalancing.updateWeights(indexSwap.address, [5000, 5000]);
-
-        let afterTokenXBalance;
-        let afterVaultValueBNB;
-
-        const valuesAfter = await indexSwapLibrary.getTokenAndVaultBalance(
-          indexSwap.address
-        );
-        const receiptAfter = await valuesAfter.wait();
-
-        if (
-          receiptAfter.events &&
-          receiptAfter.events[0] &&
-          receiptAfter.events[0].args &&
-          receiptAfter.events[0].args.tokenBalances
-        ) {
-          afterTokenXBalance = receiptAfter.events[0].args.tokenBalances;
-          afterVaultValueBNB = receiptAfter.events[0].args.vaultValue;
-        }
-
-        if (
-          receiptAfter.events &&
-          receiptAfter.events[1] &&
-          receiptAfter.events[1].args &&
-          receiptAfter.events[1].args.tokenBalances
-        ) {
-          afterTokenXBalance = receiptAfter.events[1].args.tokenBalances;
-          afterVaultValueBNB = receiptAfter.events[1].args.vaultValue;
-        }
-
-        const afterToken0Bal = Number(
-          ethers.utils.formatEther(afterTokenXBalance[0])
-        );
-        const afterToken1Bal = Number(
-          ethers.utils.formatEther(afterTokenXBalance[1])
-        );
-        const afterVaultValue = Number(
-          ethers.utils.formatEther(afterVaultValueBNB)
-        );
-
-        console.log("After update weights");
-
-        console.log(
-          Number(ethers.utils.formatEther(afterTokenXBalance[0])) /
-            afterVaultValue
-        );
-        console.log(
-          Number(ethers.utils.formatEther(afterTokenXBalance[1])) /
-            afterVaultValue
-        );
-
-        console.log("vault value", afterVaultValue);
-        console.log("total supply", await indexSwap.totalSupply());
-
-        expect(Math.ceil((afterToken0Bal * 10) / afterVaultValue)).to.be.gte(
-          (5000 * 10) / 10000
-        );
-        expect(Math.ceil((afterToken1Bal * 10) / afterVaultValue)).to.be.gte(
-          (5000 * 10) / 10000
-        );
       });
 
       it("should Update Weights and Rebalance", async () => {
-        let beforeTokenXBalance;
-        let beforeVaultValue;
-
-        const values = await indexSwapLibrary.getTokenAndVaultBalance(
-          indexSwap.address
-        );
-        const receipt = await values.wait();
-
-        if (
-          receipt.events &&
-          receipt.events[0] &&
-          receipt.events[0].args &&
-          receipt.events[0].args.tokenBalances
-        ) {
-          beforeTokenXBalance = receipt.events[0].args.tokenBalances;
-          beforeVaultValue = receipt.events[0].args.vaultValue;
-        }
-
-        if (
-          receipt.events &&
-          receipt.events[1] &&
-          receipt.events[1].args &&
-          receipt.events[1].args.tokenBalances
-        ) {
-          beforeTokenXBalance = receipt.events[1].args.tokenBalances;
-          beforeVaultValue = receipt.events[1].args.vaultValue;
-        }
-
         await rebalancing.updateWeights(indexSwap.address, [3333, 6667]);
+      });
 
-        let afterTokenXBalance;
-        let afterVaultValueBNB;
-
-        const valuesAfter = await indexSwapLibrary.getTokenAndVaultBalance(
-          indexSwap.address
-        );
-        const receiptAfter = await valuesAfter.wait();
-
-        if (
-          receiptAfter.events &&
-          receiptAfter.events[0] &&
-          receiptAfter.events[0].args &&
-          receiptAfter.events[0].args.tokenBalances
-        ) {
-          afterTokenXBalance = receiptAfter.events[0].args.tokenBalances;
-          afterVaultValueBNB = receiptAfter.events[0].args.vaultValue;
-        }
-
-        if (
-          receiptAfter.events &&
-          receiptAfter.events[1] &&
-          receiptAfter.events[1].args &&
-          receiptAfter.events[1].args.tokenBalances
-        ) {
-          afterTokenXBalance = receiptAfter.events[1].args.tokenBalances;
-          afterVaultValueBNB = receiptAfter.events[1].args.vaultValue;
-        }
-
-        const afterToken0Bal = Number(
-          ethers.utils.formatEther(afterTokenXBalance[0])
-        );
-        const afterToken1Bal = Number(
-          ethers.utils.formatEther(afterTokenXBalance[1])
-        );
-        const afterVaultValue = Number(
-          ethers.utils.formatEther(afterVaultValueBNB)
-        );
-
-        expect(Math.ceil((afterToken0Bal * 10) / afterVaultValue)).to.be.gte(
-          (3333 * 10) / 10000
-        );
-        expect(Math.ceil((afterToken1Bal * 10) / afterVaultValue)).to.be.gte(
-          (6667 * 10) / 10000
-        );
+      it("should charge fees", async () => {
+        await rebalancing.feeModule(indexSwap.address);
       });
 
       it("updateTokens should revert if total Weights not equal 10,000", async () => {
@@ -627,112 +430,10 @@ describe.only("Tests for IndexSwap", () => {
         let beforeTokenXBalance;
         let beforeVaultValue;
 
-        const values = await indexSwapLibrary.getTokenAndVaultBalance(
-          indexSwap.address
-        );
-        const receipt = await values.wait();
-
-        if (
-          receipt.events &&
-          receipt.events[0] &&
-          receipt.events[0].args &&
-          receipt.events[0].args.tokenBalances
-        ) {
-          beforeTokenXBalance = receipt.events[0].args.tokenBalances;
-          beforeVaultValue = receipt.events[0].args.vaultValue;
-        }
-
-        if (
-          receipt.events &&
-          receipt.events[2] &&
-          receipt.events[2].args &&
-          receipt.events[2].args.tokenBalances
-        ) {
-          beforeTokenXBalance = receipt.events[2].args.tokenBalances;
-          beforeVaultValue = receipt.events[2].args.vaultValue;
-        }
-
         await rebalancing.updateTokens(
           indexSwap.address,
           [ethInstance.address, daiInstance.address, wbnbInstance.address],
           [2000, 6000, 2000]
-        );
-
-        let afterTokenXBalance;
-        let afterVaultValueBNB;
-
-        const valuesAfter = await indexSwapLibrary.getTokenAndVaultBalance(
-          indexSwap.address
-        );
-        const receiptAfter = await valuesAfter.wait();
-
-        if (
-          receiptAfter.events &&
-          receiptAfter.events[0] &&
-          receiptAfter.events[0].args &&
-          receiptAfter.events[0].args.tokenBalances
-        ) {
-          afterTokenXBalance = receiptAfter.events[0].args.tokenBalances;
-          afterVaultValueBNB = receiptAfter.events[0].args.vaultValue;
-        }
-
-        if (
-          receiptAfter.events &&
-          receiptAfter.events[1] &&
-          receiptAfter.events[1].args &&
-          receiptAfter.events[1].args.tokenBalances
-        ) {
-          afterTokenXBalance = receiptAfter.events[1].args.tokenBalances;
-          afterVaultValueBNB = receiptAfter.events[1].args.vaultValue;
-        }
-
-        if (
-          receiptAfter.events &&
-          receiptAfter.events[2] &&
-          receiptAfter.events[2].args &&
-          receiptAfter.events[2].args.tokenBalances
-        ) {
-          afterTokenXBalance = receiptAfter.events[2].args.tokenBalances;
-          afterVaultValueBNB = receiptAfter.events[2].args.vaultValue;
-        }
-
-        const afterETHBal = Number(
-          ethers.utils.formatEther(afterTokenXBalance[0])
-        );
-        const afterDAIBal = Number(
-          ethers.utils.formatEther(afterTokenXBalance[1])
-        );
-        const afterWBNBBal = Number(
-          ethers.utils.formatEther(afterTokenXBalance[2])
-        );
-        const afterVaultValue = Number(
-          ethers.utils.formatEther(afterVaultValueBNB)
-        );
-
-        console.log("After update tokens");
-        console.log(
-          Number(ethers.utils.formatEther(afterTokenXBalance[0])) /
-            afterVaultValue
-        );
-        console.log(
-          Number(ethers.utils.formatEther(afterTokenXBalance[1])) /
-            afterVaultValue
-        );
-        console.log(
-          Number(ethers.utils.formatEther(afterTokenXBalance[2])) /
-            afterVaultValue
-        );
-        console.log("vault value", afterVaultValue);
-        console.log("total supply", await indexSwap.totalSupply());
-
-        expect(Math.ceil((afterETHBal * 10) / afterVaultValue)).to.be.gte(
-          (2000 * 10) / 10000
-        );
-        expect(Math.ceil((afterDAIBal * 10) / afterVaultValue)).to.be.gte(
-          (6000 * 10) / 10000
-        );
-        expect(Math.ceil((afterWBNBBal * 10) / afterVaultValue)).to.be.gte(
-          (2000 * 10) / 10000
         );
       });
 

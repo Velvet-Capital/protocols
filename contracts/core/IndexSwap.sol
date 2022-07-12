@@ -101,10 +101,6 @@ contract IndexSwap is TokenBase {
         treasury = payable(_treasury);
 
         // OpenZeppelin Access Control
-        accessController.setRoleAdmin(
-            keccak256("INDEX_MANAGER_ROLE"),
-            keccak256("DEFAULT_ADMIN_ROLE")
-        );
         accessController.setupRole(
             keccak256("INDEX_MANAGER_ROLE"),
             address(this)
@@ -239,15 +235,22 @@ contract IndexSwap is TokenBase {
             );
 
             if (_tokens[i] == adapter.getETH()) {
-                adapter._pullFromVault(this, _tokens[i], amount, address(this));
+                adapter._pullFromVault(
+                    this,
+                    _tokens[i],
+                    amount,
+                    address(adapter)
+                );
                 if (tokenMetadata.vTokens(_tokens[i]) != address(0)) {
                     adapter.redeemBNB(
                         tokenMetadata.vTokens(_tokens[i]),
-                        amount
+                        amount,
+                        msg.sender
                     );
+                } else {
+                    IWETH(_tokens[i]).withdraw(amount);
+                    payable(msg.sender).transfer(amount);
                 }
-                IWETH(_tokens[i]).withdraw(amount);
-                payable(msg.sender).transfer(amount);
             } else {
                 adapter._pullFromVault(
                     this,
@@ -352,19 +355,11 @@ contract IndexSwap is TokenBase {
         delete _records[t];
     }
 
-    function getTreasury() public view returns (address) {
-        return treasury;
-    }
-
     function updateTreasury(address _newTreasury)
         public
         onlyRebalancerContract
     {
         treasury = _newTreasury;
-    }
-
-    function getFee() public view returns (uint256) {
-        return feePointBasis;
     }
 
     // important to receive ETH

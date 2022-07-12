@@ -46,12 +46,12 @@ async function main() {
   );
   await indexSwapLibrary.deployed();
 
-  // Index Manager
+  // Adapter
   const Adapter = await ethers.getContractFactory("Adapter");
   const adapter = await Adapter.deploy(
     accessController.address,
     addresses.PancakeSwapRouterAddress,
-    addresses.Module,
+    "0xEc440E63372c2c7392F57beB544D3027d225768d",
     tokenMetadata.address
   );
   await adapter.deployed();
@@ -62,14 +62,14 @@ async function main() {
     "INDEXLY",
     "IDX",
     addresses.WETH_Address,
-    addresses.Vault,
+    "0x424D1ccB40ec890AC2Fc90917798db3ECfE20581",
     "500000000000000000000",
     indexSwapLibrary.address,
     adapter.address,
     accessController.address,
     tokenMetadata.address,
-    "250",
-    "0x74A53d748e9BBED5380ff134889A02EffDc4345a"
+    "100",
+    "0xcFC89B2986e70d5E64b3399E651024110681F64A" // treasury
   );
   await indexSwap.deployed();
 
@@ -85,6 +85,8 @@ async function main() {
   console.log(`Adapter deployed to: ${adapter.address}`);
   console.log(`IndexSwap deployed to: ${indexSwap.address}`);
   console.log(`Rebalancing deployed to: ${rebalancing.address}`);
+  console.log(`IndexSwapLibrary deployed to: ${indexSwapLibrary.address}`);
+  console.log(`TokenMetadata deployed to: ${tokenMetadata.address}`);
 }
 
 // We recommend this pattern to be able to use async/await everywhere
