@@ -235,7 +235,12 @@ contract IndexSwap is TokenBase {
             );
 
             if (_tokens[i] == adapter.getETH()) {
-                adapter._pullFromVault(this, _tokens[i], amount, address(this));
+                adapter._pullFromVault(
+                    this,
+                    _tokens[i],
+                    amount,
+                    address(adapter)
+                );
                 if (tokenMetadata.vTokens(_tokens[i]) != address(0)) {
                     adapter.redeemBNB(
                         tokenMetadata.vTokens(_tokens[i]),
