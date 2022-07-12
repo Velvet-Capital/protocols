@@ -41,6 +41,8 @@ contract Rebalancing is ReentrancyGuard {
     uint256 internal lastRebalanced;
     uint256 internal lastFeeCharged;
 
+    event FeeCharged(uint256 charged, address token, uint256 amount);
+
     constructor(
         IndexSwapLibrary _indexSwapLibrary,
         Adapter _adapter,
@@ -403,6 +405,8 @@ contract Rebalancing is ReentrancyGuard {
                     );
                 }
             }
+
+            emit FeeCharged(block.timestamp, _index.getTokens()[i], amount);
         }
 
         lastFeeCharged = block.timestamp;
