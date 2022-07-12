@@ -42,6 +42,12 @@ contract Rebalancing is ReentrancyGuard {
     uint256 internal lastFeeCharged;
 
     event FeeCharged(uint256 charged, address token, uint256 amount);
+    event UpdatedWeights(uint256 updated, uint96[] newDenorms);
+    event UpdatedTokens(
+        uint256 updated,
+        address[] newTokens,
+        uint96[] newDenorms
+    );
 
     constructor(
         IndexSwapLibrary _indexSwapLibrary,
@@ -229,8 +235,10 @@ contract Rebalancing is ReentrancyGuard {
             denorms.length == _index.getTokens().length,
             "Lengths don't match"
         );
+
         _index.updateRecords(_index.getTokens(), denorms);
         rebalance(_index);
+        emit UpdatedWeights(block.timestamp, denorms);
     }
 
     /**
@@ -332,6 +340,8 @@ contract Rebalancing is ReentrancyGuard {
         _index.updateTokenList(tokens);
 
         rebalance(_index);
+
+        emit UpdatedTokens(block.timestamp, tokens, denorms);
     }
 
     // Fee module
