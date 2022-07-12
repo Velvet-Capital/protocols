@@ -75,6 +75,7 @@ async function main() {
 
   const Rebalancing = await ethers.getContractFactory("Rebalancing");
   const rebalancing = await Rebalancing.deploy(
+    indexSwap.address,
     indexSwapLibrary.address,
     adapter.address,
     accessController.address,

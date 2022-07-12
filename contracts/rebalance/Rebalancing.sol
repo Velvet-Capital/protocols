@@ -30,6 +30,7 @@ contract Rebalancing is ReentrancyGuard {
     bytes32 public constant ASSET_MANAGER_ROLE =
         keccak256("ASSET_MANAGER_ROLE");
 
+    IndexSwap public index;
     IndexSwapLibrary public indexSwapLibrary;
     Adapter public adapter;
 
@@ -50,11 +51,13 @@ contract Rebalancing is ReentrancyGuard {
     );
 
     constructor(
+        IndexSwap _index,
         IndexSwapLibrary _indexSwapLibrary,
         Adapter _adapter,
         AccessController _accessController,
         TokenMetadata _tokenMetadata
     ) {
+        index = _index;
         indexSwapLibrary = _indexSwapLibrary;
         adapter = _adapter;
         accessController = _accessController;
@@ -85,11 +88,10 @@ contract Rebalancing is ReentrancyGuard {
 
     /**
     @notice The function will pause the InvestInFund() and Withdrawal().
-    @param _index The portfolio address whose functions need to paused.
     @param _state The state is bool value which needs to input by the Index Manager.
     */
-    function setPause(IndexSwap _index, bool _state) public onlyAssetManager {
-        _index.setPaused(_state);
+    function setPause(bool _state) public onlyAssetManager {
+        index.setPaused(_state);
     }
 
     /**
@@ -99,17 +101,16 @@ contract Rebalancing is ReentrancyGuard {
      * @return sumWeightsToSwap Returns the weight of tokens that have to be swapped to rebalance the portfolio (buy)
      */
     function sellTokens(
-        IndexSwap _index,
         uint256[] memory _oldWeights,
         uint256[] memory _newWeights
     ) internal returns (uint256 sumWeightsToSwap) {
         // sell - swap to BNB
-        for (uint256 i = 0; i < _index.getTokens().length; i++) {
+        for (uint256 i = 0; i < index.getTokens().length; i++) {
             if (_newWeights[i] < _oldWeights[i]) {
                 uint256 tokenBalance = indexSwapLibrary.getTokenBalance(
-                    _index,
-                    _index.getTokens()[i],
-                    adapter.getETH() == _index.getTokens()[i]
+                    index,
+                    index.getTokens()[i],
+                    adapter.getETH() == index.getTokens()[i]
                 );
 
                 uint256 weightDiff = _oldWeights[i].sub(_newWeights[i]);
@@ -117,35 +118,35 @@ contract Rebalancing is ReentrancyGuard {
                     _oldWeights[i]
                 );
 
-                if (_index.getTokens()[i] == adapter.getETH()) {
+                if (index.getTokens()[i] == adapter.getETH()) {
                     adapter._pullFromVault(
-                        _index,
-                        _index.getTokens()[i],
+                        index,
+                        index.getTokens()[i],
                         swapAmount,
                         address(this)
                     );
 
                     if (
-                        tokenMetadata.vTokens(_index.getTokens()[i]) !=
+                        tokenMetadata.vTokens(index.getTokens()[i]) !=
                         address(0)
                     ) {
                         adapter.redeemBNB(
-                            tokenMetadata.vTokens(_index.getTokens()[i]),
+                            tokenMetadata.vTokens(index.getTokens()[i]),
                             swapAmount,
                             address(this)
                         );
                     } else {
-                        IWETH(_index.getTokens()[i]).withdraw(swapAmount);
+                        IWETH(index.getTokens()[i]).withdraw(swapAmount);
                     }
                 } else {
                     adapter._pullFromVault(
-                        _index,
-                        _index.getTokens()[i],
+                        index,
+                        index.getTokens()[i],
                         swapAmount,
                         address(adapter)
                     );
                     adapter._swapTokenToETH(
-                        _index.getTokens()[i],
+                        index.getTokens()[i],
                         swapAmount,
                         address(this)
                     );
@@ -163,13 +164,12 @@ contract Rebalancing is ReentrancyGuard {
      * @param _newWeights The new token allocation the portfolio should be rebalanced to
      */
     function buyTokens(
-        IndexSwap _index,
         uint256[] memory _oldWeights,
         uint256[] memory _newWeights,
         uint256 sumWeightsToSwap
     ) internal {
         uint256 totalBNBAmount = address(this).balance;
-        for (uint256 i = 0; i < _index.getTokens().length; i++) {
+        for (uint256 i = 0; i < index.getTokens().length; i++) {
             if (_newWeights[i] > _oldWeights[i]) {
                 uint256 weightToSwap = _newWeights[i].sub(_oldWeights[i]);
                 require(weightToSwap > 0, "weight not greater than 0");
@@ -179,9 +179,9 @@ contract Rebalancing is ReentrancyGuard {
                 );
 
                 adapter._swapETHToToken{value: swapAmount}(
-                    _index.getTokens()[i],
+                    index.getTokens()[i],
                     swapAmount,
-                    _index.vault()
+                    index.vault()
                 );
             }
         }
@@ -190,35 +190,31 @@ contract Rebalancing is ReentrancyGuard {
     /**
      * @notice The function rebalances the token weights in the portfolio
      */
-    function rebalance(IndexSwap _index)
-        internal
-        onlyAssetManager
-        nonReentrant
-    {
-        require(_index.totalSupply() > 0);
+    function rebalance() internal onlyAssetManager nonReentrant {
+        require(index.totalSupply() > 0);
 
         uint256 vaultBalance = 0;
 
-        uint256[] memory newWeights = new uint256[](_index.getTokens().length);
-        uint256[] memory oldWeights = new uint256[](_index.getTokens().length);
+        uint256[] memory newWeights = new uint256[](index.getTokens().length);
+        uint256[] memory oldWeights = new uint256[](index.getTokens().length);
         uint256[] memory tokenBalanceInBNB = new uint256[](
-            _index.getTokens().length
+            index.getTokens().length
         );
 
         (tokenBalanceInBNB, vaultBalance) = indexSwapLibrary
-            .getTokenAndVaultBalance(_index);
+            .getTokenAndVaultBalance(index);
 
-        for (uint256 i = 0; i < _index.getTokens().length; i++) {
-            oldWeights[i] = tokenBalanceInBNB[i].mul(_index.TOTAL_WEIGHT()).div(
+        for (uint256 i = 0; i < index.getTokens().length; i++) {
+            oldWeights[i] = tokenBalanceInBNB[i].mul(index.TOTAL_WEIGHT()).div(
                 vaultBalance
             );
             newWeights[i] = uint256(
-                _index.getRecord(_index.getTokens()[i]).denorm
+                index.getRecord(index.getTokens()[i]).denorm
             );
         }
 
-        uint256 sumWeightsToSwap = sellTokens(_index, oldWeights, newWeights);
-        buyTokens(_index, oldWeights, newWeights, sumWeightsToSwap);
+        uint256 sumWeightsToSwap = sellTokens(oldWeights, newWeights);
+        buyTokens(oldWeights, newWeights, sumWeightsToSwap);
 
         lastRebalanced = block.timestamp;
     }
@@ -227,17 +223,14 @@ contract Rebalancing is ReentrancyGuard {
      * @notice The function updates the token weights and rebalances the portfolio to the new weights
      * @param denorms The new token weights of the portfolio
      */
-    function updateWeights(IndexSwap _index, uint96[] calldata denorms)
-        public
-        onlyAssetManager
-    {
+    function updateWeights(uint96[] calldata denorms) public onlyAssetManager {
         require(
-            denorms.length == _index.getTokens().length,
+            denorms.length == index.getTokens().length,
             "Lengths don't match"
         );
 
-        _index.updateRecords(_index.getTokens(), denorms);
-        rebalance(_index);
+        index.updateRecords(index.getTokens(), denorms);
+        rebalance();
         emit UpdatedWeights(block.timestamp, denorms);
     }
 
@@ -248,14 +241,13 @@ contract Rebalancing is ReentrancyGuard {
      * @return A list of updated denorms for the new token list
      */
     function evaluateNewDenorms(
-        IndexSwap _index,
         address[] memory tokens,
         uint96[] memory denorms
     ) internal view returns (uint256[] memory) {
-        uint256[] memory newDenorms = new uint256[](_index.getTokens().length);
-        for (uint256 i = 0; i < _index.getTokens().length; i++) {
+        uint256[] memory newDenorms = new uint256[](index.getTokens().length);
+        for (uint256 i = 0; i < index.getTokens().length; i++) {
             for (uint256 j = 0; j < tokens.length; j++) {
-                if (_index.getTokens()[i] == tokens[j]) {
+                if (index.getTokens()[i] == tokens[j]) {
                     newDenorms[i] = denorms[j];
                     break;
                 }
@@ -269,164 +261,152 @@ contract Rebalancing is ReentrancyGuard {
      * @param tokens The updated token list of the portfolio
      * @param denorms The new weights for for the portfolio
      */
-    function updateTokens(
-        IndexSwap _index,
-        address[] memory tokens,
-        uint96[] memory denorms
-    ) public onlyAssetManager {
+    function updateTokens(address[] memory tokens, uint96[] memory denorms)
+        public
+        onlyAssetManager
+    {
         uint256 totalWeight = 0;
 
         for (uint256 i = 0; i < tokens.length; i++) {
             totalWeight = totalWeight.add(denorms[i]);
         }
-        require(totalWeight == _index.TOTAL_WEIGHT(), "INVALID_WEIGHTS");
+        require(totalWeight == index.TOTAL_WEIGHT(), "INVALID_WEIGHTS");
 
-        uint256[] memory newDenorms = evaluateNewDenorms(
-            _index,
-            tokens,
-            denorms
-        );
+        uint256[] memory newDenorms = evaluateNewDenorms(tokens, denorms);
 
-        if (_index.totalSupply() > 0) {
+        if (index.totalSupply() > 0) {
             // sell - swap to BNB
-            for (uint256 i = 0; i < _index.getTokens().length; i++) {
+            for (uint256 i = 0; i < index.getTokens().length; i++) {
                 // token removed
                 if (newDenorms[i] == 0) {
                     uint256 tokenBalance = indexSwapLibrary.getTokenBalance(
-                        _index,
-                        _index.getTokens()[i],
-                        adapter.getETH() == _index.getTokens()[i]
+                        index,
+                        index.getTokens()[i],
+                        adapter.getETH() == index.getTokens()[i]
                     );
 
-                    if (_index.getTokens()[i] == adapter.getETH()) {
+                    if (index.getTokens()[i] == adapter.getETH()) {
                         adapter._pullFromVault(
-                            _index,
-                            _index.getTokens()[i],
+                            index,
+                            index.getTokens()[i],
                             tokenBalance,
                             address(this)
                         );
                         if (
-                            tokenMetadata.vTokens(_index.getTokens()[i]) !=
+                            tokenMetadata.vTokens(index.getTokens()[i]) !=
                             address(0)
                         ) {
                             adapter.redeemBNB(
-                                tokenMetadata.vTokens(_index.getTokens()[i]),
+                                tokenMetadata.vTokens(index.getTokens()[i]),
                                 tokenBalance,
                                 address(this)
                             );
                         } else {
-                            IWETH(_index.getTokens()[i]).withdraw(tokenBalance);
+                            IWETH(index.getTokens()[i]).withdraw(tokenBalance);
                         }
                     } else {
                         adapter._pullFromVault(
-                            _index,
-                            _index.getTokens()[i],
+                            index,
+                            index.getTokens()[i],
                             tokenBalance,
                             address(adapter)
                         );
                         adapter._swapTokenToETH(
-                            _index.getTokens()[i],
+                            index.getTokens()[i],
                             tokenBalance,
                             address(this)
                         );
                     }
 
-                    _index.deleteRecord(_index.getTokens()[i]);
+                    index.deleteRecord(index.getTokens()[i]);
                 }
             }
         }
-        _index.updateRecords(tokens, denorms);
+        index.updateRecords(tokens, denorms);
 
-        _index.updateTokenList(tokens);
+        index.updateTokenList(tokens);
 
-        rebalance(_index);
+        rebalance();
 
         emit UpdatedTokens(block.timestamp, tokens, denorms);
     }
 
     // Fee module
-    function feeModule(IndexSwap _index) public onlyAssetManager {
+    function feeModule() public onlyAssetManager {
         require(
             lastFeeCharged < lastRebalanced,
             "Fee has already been charged after the last rebalancing!"
         );
 
-        for (uint256 i = 0; i < _index.getTokens().length; i++) {
+        for (uint256 i = 0; i < index.getTokens().length; i++) {
             uint256 tokenBalance = indexSwapLibrary.getTokenBalance(
-                _index,
-                _index.getTokens()[i],
-                adapter.getETH() == _index.getTokens()[i]
+                index,
+                index.getTokens()[i],
+                adapter.getETH() == index.getTokens()[i]
             );
 
-            uint256 amount = tokenBalance.mul(_index.feePointBasis()).div(
+            uint256 amount = tokenBalance.mul(index.feePointBasis()).div(
                 10_000
             );
 
-            if (_index.getTokens()[i] == adapter.getETH()) {
-                if (
-                    tokenMetadata.vTokens(_index.getTokens()[i]) != address(0)
-                ) {
+            if (index.getTokens()[i] == adapter.getETH()) {
+                if (tokenMetadata.vTokens(index.getTokens()[i]) != address(0)) {
                     adapter._pullFromVault(
-                        _index,
-                        _index.getTokens()[i],
+                        index,
+                        index.getTokens()[i],
                         amount,
                         address(adapter)
                     );
 
                     adapter.redeemBNB(
-                        tokenMetadata.vTokens(_index.getTokens()[i]),
+                        tokenMetadata.vTokens(index.getTokens()[i]),
                         amount,
-                        _index.treasury()
+                        index.treasury()
                     );
                 } else {
                     adapter._pullFromVault(
-                        _index,
-                        _index.getTokens()[i],
+                        index,
+                        index.getTokens()[i],
                         amount,
                         address(this)
                     );
 
-                    IWETH(_index.getTokens()[i]).withdraw(amount);
+                    IWETH(index.getTokens()[i]).withdraw(amount);
                     payable(msg.sender).transfer(amount);
                 }
             } else {
-                if (
-                    tokenMetadata.vTokens(_index.getTokens()[i]) != address(0)
-                ) {
+                if (tokenMetadata.vTokens(index.getTokens()[i]) != address(0)) {
                     adapter._pullFromVault(
-                        _index,
-                        _index.getTokens()[i],
+                        index,
+                        index.getTokens()[i],
                         amount,
                         address(adapter)
                     );
 
                     adapter.redeemToken(
-                        tokenMetadata.vTokens(_index.getTokens()[i]),
-                        _index.getTokens()[i],
+                        tokenMetadata.vTokens(index.getTokens()[i]),
+                        index.getTokens()[i],
                         amount,
-                        _index.treasury()
+                        index.treasury()
                     );
                 } else {
                     adapter._pullFromVault(
-                        _index,
-                        _index.getTokens()[i],
+                        index,
+                        index.getTokens()[i],
                         amount,
-                        _index.treasury()
+                        index.treasury()
                     );
                 }
             }
 
-            emit FeeCharged(block.timestamp, _index.getTokens()[i], amount);
+            emit FeeCharged(block.timestamp, index.getTokens()[i], amount);
         }
 
         lastFeeCharged = block.timestamp;
     }
 
-    function updateTreasury(IndexSwap _index, address _newAddress)
-        public
-        onlyAssetManager
-    {
-        _index.updateTreasury(_newAddress);
+    function updateTreasury(address _newAddress) public onlyAssetManager {
+        index.updateTreasury(_newAddress);
     }
 
     // important to receive ETH
