@@ -350,19 +350,11 @@ contract IndexSwap is TokenBase {
         delete _records[t];
     }
 
-    function getTreasury() public view returns (address) {
-        return treasury;
-    }
-
     function updateTreasury(address _newTreasury)
         public
         onlyRebalancerContract
     {
         treasury = _newTreasury;
-    }
-
-    function getFee() public view returns (uint256) {
-        return feePointBasis;
     }
 
     // important to receive ETH
