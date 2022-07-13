@@ -203,7 +203,9 @@ contract IndexSwap is TokenBase {
         _mint(msg.sender, tokenAmount);
 
         // refund leftover ETH to user
-        (bool success, ) = msg.sender.call{value: address(this).balance}("");
+        (bool success, ) = payable(msg.sender).call{
+            value: address(this).balance
+        }("");
         require(success, "refund failed");
     }
 
