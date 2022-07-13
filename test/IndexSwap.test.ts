@@ -60,8 +60,6 @@ describe.only("Tests for IndexSwap", () => {
   const provider = ethers.provider;
   const chainId: any = forkChainId ? forkChainId : 56;
   const addresses = chainIdToAddresses[chainId];
-  var bnbBefore = 0;
-  var bnbAfter = 0;
   let safeAddress = "0x";
 
   const wbnbInstance = new ethers.Contract(
@@ -236,6 +234,7 @@ describe.only("Tests for IndexSwap", () => {
 
       const Rebalancing = await ethers.getContractFactory("Rebalancing");
       rebalancing = await Rebalancing.deploy(
+        indexSwap.address,
         indexSwapLibrary.address,
         adapter.address,
         accessController.address,
@@ -290,58 +289,6 @@ describe.only("Tests for IndexSwap", () => {
         });
         const indexSupplyAfter = await indexSwap.totalSupply();
 
-        const valuesAfter = await indexSwapLibrary.getTokenAndVaultBalance(
-          indexSwap.address
-        );
-
-        const receipt = await valuesAfter.wait();
-        console.log(receipt);
-
-        let vaultBalance;
-        let tokenBalances;
-
-        if (
-          receipt.events &&
-          receipt.events[0] &&
-          receipt.events[0].args &&
-          receipt.events[0].args.tokenBalances
-        ) {
-          tokenBalances = receipt.events[0].args.tokenBalances;
-          vaultBalance = receipt.events[0].args.vaultValue;
-        }
-
-        if (
-          receipt.events &&
-          receipt.events[1] &&
-          receipt.events[1].args &&
-          receipt.events[1].args.tokenBalances
-        ) {
-          tokenBalances = receipt.events[1].args.tokenBalances;
-          vaultBalance = receipt.events[1].args.vaultValue;
-        }
-
-        if (
-          receipt.events &&
-          receipt.events[2] &&
-          receipt.events[2].args &&
-          receipt.events[2].args.tokenBalances
-        ) {
-          tokenBalances = receipt.events[2].args.tokenBalances;
-          vaultBalance = receipt.events[2].args.vaultValue;
-        }
-
-        if (
-          receipt.events &&
-          receipt.events[3] &&
-          receipt.events[3].args &&
-          receipt.events[3].args.tokenBalances
-        ) {
-          tokenBalances = receipt.events[3].args.tokenBalances;
-          vaultBalance = receipt.events[3].args.vaultValue;
-        }
-
-        bnbBefore = Number(vaultBalance);
-
         expect(Number(indexSupplyAfter)).to.be.greaterThanOrEqual(
           Number(indexSupplyBefore)
         );
@@ -375,7 +322,7 @@ describe.only("Tests for IndexSwap", () => {
       });
 
       it("Investment should fail when contract is paused", async () => {
-        await rebalancing.setPause(indexSwap.address, true);
+        await rebalancing.setPause(true);
         await expect(
           indexSwap.investInFund({
             value: "1000000000000000000",
@@ -385,38 +332,35 @@ describe.only("Tests for IndexSwap", () => {
 
       it("update Weights should revert if total Weights not equal 10,000", async () => {
         await expect(
-          rebalancing.updateWeights(indexSwap.address, [6667, 3330])
+          rebalancing.updateWeights([6667, 3330])
         ).to.be.revertedWith("INVALID_WEIGHTS");
       });
 
       it("should revert to charge fees", async () => {
-        await expect(
-          rebalancing.feeModule(indexSwap.address)
-        ).to.be.revertedWith(
+        await expect(rebalancing.feeModule()).to.be.revertedWith(
           "Fee has already been charged after the last rebalancing!"
         );
       });
 
       it("should Update Weights and Rebalance", async () => {
-        await rebalancing.updateWeights(indexSwap.address, [6667, 3333]);
+        await rebalancing.updateWeights([6667, 3333]);
       });
 
       it("should Update Weights and Rebalance", async () => {
-        await rebalancing.updateWeights(indexSwap.address, [5000, 5000]);
+        await rebalancing.updateWeights([5000, 5000]);
       });
 
       it("should Update Weights and Rebalance", async () => {
-        await rebalancing.updateWeights(indexSwap.address, [3333, 6667]);
+        await rebalancing.updateWeights([3333, 6667]);
       });
 
       it("should charge fees", async () => {
-        await rebalancing.feeModule(indexSwap.address);
+        await rebalancing.feeModule();
       });
 
       it("updateTokens should revert if total Weights not equal 10,000", async () => {
         await expect(
           rebalancing.updateTokens(
-            indexSwap.address,
             [ethInstance.address, daiInstance.address, wbnbInstance.address],
             [2000, 6000, 1000]
           )
@@ -431,7 +375,6 @@ describe.only("Tests for IndexSwap", () => {
         let beforeVaultValue;
 
         await rebalancing.updateTokens(
-          indexSwap.address,
           [ethInstance.address, daiInstance.address, wbnbInstance.address],
           [2000, 6000, 2000]
         );
@@ -448,7 +391,7 @@ describe.only("Tests for IndexSwap", () => {
       });
 
       it("should unpause", async () => {
-        await rebalancing.setPause(indexSwap.address, false);
+        await rebalancing.setPause(false);
       });
 
       it("when withdraw fund more then balance", async () => {
