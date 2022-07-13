@@ -332,7 +332,7 @@ contract Rebalancing is ReentrancyGuard {
     }
 
     // Fee module
-    function feeModule() public onlyAssetManager {
+    function feeModule() public onlyAssetManager nonReentrant {
         require(
             lastFeeCharged < lastRebalanced,
             "Fee has already been charged after the last rebalancing!"
