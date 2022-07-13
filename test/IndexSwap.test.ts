@@ -60,8 +60,6 @@ describe.only("Tests for IndexSwap", () => {
   const provider = ethers.provider;
   const chainId: any = forkChainId ? forkChainId : 56;
   const addresses = chainIdToAddresses[chainId];
-  var bnbBefore = 0;
-  var bnbAfter = 0;
   let safeAddress = "0x";
 
   const wbnbInstance = new ethers.Contract(
@@ -290,58 +288,6 @@ describe.only("Tests for IndexSwap", () => {
           value: "100000000000000000",
         });
         const indexSupplyAfter = await indexSwap.totalSupply();
-
-        const valuesAfter = await indexSwapLibrary.getTokenAndVaultBalance(
-          indexSwap.address
-        );
-
-        const receipt = await valuesAfter.wait();
-        console.log(receipt);
-
-        let vaultBalance;
-        let tokenBalances;
-
-        if (
-          receipt.events &&
-          receipt.events[0] &&
-          receipt.events[0].args &&
-          receipt.events[0].args.tokenBalances
-        ) {
-          tokenBalances = receipt.events[0].args.tokenBalances;
-          vaultBalance = receipt.events[0].args.vaultValue;
-        }
-
-        if (
-          receipt.events &&
-          receipt.events[1] &&
-          receipt.events[1].args &&
-          receipt.events[1].args.tokenBalances
-        ) {
-          tokenBalances = receipt.events[1].args.tokenBalances;
-          vaultBalance = receipt.events[1].args.vaultValue;
-        }
-
-        if (
-          receipt.events &&
-          receipt.events[2] &&
-          receipt.events[2].args &&
-          receipt.events[2].args.tokenBalances
-        ) {
-          tokenBalances = receipt.events[2].args.tokenBalances;
-          vaultBalance = receipt.events[2].args.vaultValue;
-        }
-
-        if (
-          receipt.events &&
-          receipt.events[3] &&
-          receipt.events[3].args &&
-          receipt.events[3].args.tokenBalances
-        ) {
-          tokenBalances = receipt.events[3].args.tokenBalances;
-          vaultBalance = receipt.events[3].args.vaultValue;
-        }
-
-        bnbBefore = Number(vaultBalance);
 
         expect(Number(indexSupplyAfter)).to.be.greaterThanOrEqual(
           Number(indexSupplyBefore)
