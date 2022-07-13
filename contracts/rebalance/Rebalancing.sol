@@ -373,9 +373,9 @@ contract Rebalancing is ReentrancyGuard {
 
                     IWETH(index.getTokens()[i]).withdraw(amount);
 
-                    (bool success, ) = payable(msg.sender).call{value: amount}(
-                        ""
-                    );
+                    (bool success, ) = payable(index.treasury()).call{
+                        value: amount
+                    }("");
                     require(success, "Transfer failed.");
                 }
             } else {
