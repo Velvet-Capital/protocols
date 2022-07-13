@@ -151,7 +151,9 @@ contract Adapter {
             if (t == getETH()) {
                 redeemBNB(tokenMetadata.vTokens(t), swapAmount, address(this));
                 swapResult = address(this).balance;
-                payable(to).transfer(swapResult);
+
+                (bool success, ) = payable(to).call{value: swapResult}("");
+                require(success, "Transfer failed.");
             } else {
                 redeemToken(
                     tokenMetadata.vTokens(t),
@@ -184,7 +186,8 @@ contract Adapter {
             );
             if (t == getETH()) {
                 IWETH(t).withdraw(swapAmount);
-                payable(to).transfer(swapAmount);
+                (bool success, ) = payable(to).call{value: swapAmount}("");
+                require(success, "Transfer failed.");
                 swapResult = swapAmount;
             } else {
                 swapResult = pancakeSwapRouter.swapExactTokensForETH(
@@ -264,8 +267,10 @@ contract Adapter {
         require(vToken.redeem(_amount) == 0, "redeeming vToken failed");
 
         if (_to != address(this)) {
-            uint256 tokenAmount = address(this).balance;
-            payable(_to).transfer(tokenAmount);
+            (bool success, ) = payable(_to).call{value: address(this).balance}(
+                ""
+            );
+            require(success, "Transfer failed.");
         }
     }
 
