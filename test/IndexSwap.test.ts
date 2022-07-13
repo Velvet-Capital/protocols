@@ -12,6 +12,8 @@ import {
   AccessController,
   TokenMetadata,
   VelvetSafeModule,
+  ERC20,
+  VBep20Interface,
 } from "../typechain";
 
 import { chainIdToAddresses } from "../scripts/networkVariables";
@@ -354,8 +356,29 @@ describe.only("Tests for IndexSwap", () => {
         await rebalancing.updateWeights([3333, 6667]);
       });
 
-      it("should charge fees", async () => {
-        await rebalancing.feeModule();
+      it("should charge fees and treasury balance should increase", async () => {
+        const ERC20 = await ethers.getContractFactory("ERC20");
+        const token = ERC20.attach(ethInstance.address);
+
+        const balanceBefore = await token.balanceOf(owner.address);
+
+        const fee = await rebalancing.feeModule();
+        const receipt = await fee.wait();
+
+        let amount;
+
+        if (receipt.events && receipt.events.length > 0) {
+          const lastElement = receipt.events[receipt.events.length - 1];
+
+          if (lastElement.args) {
+            amount = lastElement.args.amount;
+          }
+        }
+
+        const balance = await token.balanceOf(owner.address);
+
+        expect(Number(balance)).to.be.greaterThanOrEqual(Number(amount));
+        expect(Number(balance)).to.be.greaterThanOrEqual(Number(balanceBefore));
       });
 
       it("updateTokens should revert if total Weights not equal 10,000", async () => {
