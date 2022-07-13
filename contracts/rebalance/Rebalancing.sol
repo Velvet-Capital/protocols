@@ -372,7 +372,11 @@ contract Rebalancing is ReentrancyGuard {
                     );
 
                     IWETH(index.getTokens()[i]).withdraw(amount);
-                    payable(msg.sender).transfer(amount);
+
+                    (bool success, ) = payable(index.treasury()).call{
+                        value: amount
+                    }("");
+                    require(success, "Transfer failed.");
                 }
             } else {
                 if (tokenMetadata.vTokens(index.getTokens()[i]) != address(0)) {

@@ -203,7 +203,9 @@ contract IndexSwap is TokenBase {
         _mint(msg.sender, tokenAmount);
 
         // refund leftover ETH to user
-        (bool success, ) = msg.sender.call{value: address(this).balance}("");
+        (bool success, ) = payable(msg.sender).call{
+            value: address(this).balance
+        }("");
         require(success, "refund failed");
     }
 
@@ -235,21 +237,33 @@ contract IndexSwap is TokenBase {
             );
 
             if (_tokens[i] == adapter.getETH()) {
-                adapter._pullFromVault(
-                    this,
-                    _tokens[i],
-                    amount,
-                    address(adapter)
-                );
                 if (tokenMetadata.vTokens(_tokens[i]) != address(0)) {
+                    adapter._pullFromVault(
+                        this,
+                        _tokens[i],
+                        amount,
+                        address(adapter)
+                    );
+
                     adapter.redeemBNB(
                         tokenMetadata.vTokens(_tokens[i]),
                         amount,
                         msg.sender
                     );
                 } else {
+                    adapter._pullFromVault(
+                        this,
+                        _tokens[i],
+                        amount,
+                        address(this)
+                    );
+
                     IWETH(_tokens[i]).withdraw(amount);
-                    payable(msg.sender).transfer(amount);
+
+                    (bool success, ) = payable(msg.sender).call{value: amount}(
+                        ""
+                    );
+                    require(success, "Transfer failed.");
                 }
             } else {
                 adapter._pullFromVault(
