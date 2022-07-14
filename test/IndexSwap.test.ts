@@ -284,6 +284,12 @@ describe.only("Tests for IndexSwap", () => {
       });
 
       it("Invest 0.1BNB into Top10 fund", async () => {
+        const VBep20Interface = await ethers.getContractAt(
+          "VBep20Interface",
+          "0xf508fCD89b8bd15579dc79A6827cB4686A3592c8"
+        );
+        const vETHBalanceBefore = await VBep20Interface.balanceOf(safeAddress);
+
         const indexSupplyBefore = await indexSwap.totalSupply();
         //console.log("0.1bnb before", indexSupplyBefore);
         await indexSwap.investInFund({
@@ -293,6 +299,12 @@ describe.only("Tests for IndexSwap", () => {
 
         expect(Number(indexSupplyAfter)).to.be.greaterThanOrEqual(
           Number(indexSupplyBefore)
+        );
+
+        const vETHBalanceAfter = await VBep20Interface.balanceOf(safeAddress);
+
+        expect(Number(vETHBalanceAfter)).to.be.greaterThan(
+          Number(vETHBalanceBefore)
         );
       });
 
