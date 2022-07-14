@@ -13,6 +13,8 @@
     "block-number": "npx hardhat block-number",
     "deploy": "npx hardhat run scripts/deploy.ts",
     "deploy:network": "hardhat run scripts/deploy.ts --network",
+    "deployBsc:safe":"npx hardhat run scripts/deploySafeBsc.ts --network bscMainnet",
+    "deployBsc:common":"npx hardhat run scripts/deployPersistentBsc.ts --network bscMainnet",
     "verify:network": "hardhat verify --network",
     "test": "npx hardhat test",
     "coverage": "npx hardhat coverage",
