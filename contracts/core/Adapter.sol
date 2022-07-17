@@ -101,6 +101,7 @@ contract Adapter {
     ) public payable onlyIndexManager returns (uint256 swapResult) {
         if (t == getETH()) {
             if (tokenMetadata.vTokens(t) != address(0)) {
+                swapResult = swapAmount;
                 lendBNB(t, tokenMetadata.vTokens(t), swapResult, to);
             } else {
                 IWETH(t).deposit{value: swapAmount}();

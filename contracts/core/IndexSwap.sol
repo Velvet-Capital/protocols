@@ -119,6 +119,7 @@ contract IndexSwap is TokenBase {
         external
         onlyOwner
     {
+        require(tokens.length == denorms.length, "INVALID_INIT_INPUT");
         require(_tokens.length == 0, "INITIALIZED");
         uint256 len = tokens.length;
         uint256 totalWeight = 0;
