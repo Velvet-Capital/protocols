@@ -212,7 +212,11 @@ contract Adapter {
         IERC20 underlyingToken = IERC20(_underlyingAsset);
         VBep20Interface vToken = VBep20Interface(_vAsset);
 
-        underlyingToken.approve(address(vToken), _amount);
+        TransferHelper.safeApprove(
+            address(underlyingToken),
+            address(vToken),
+            _amount
+        );
         assert(vToken.mint(_amount) == 0);
         uint256 vBalance = vToken.balanceOf(address(this));
         TransferHelper.safeTransfer(_vAsset, _to, vBalance);
@@ -227,7 +231,11 @@ contract Adapter {
         IERC20 underlyingToken = IERC20(_underlyingAsset);
         IVBNB vToken = IVBNB(_vAsset);
 
-        underlyingToken.approve(address(vToken), _amount);
+        TransferHelper.safeApprove(
+            address(underlyingToken),
+            address(vToken),
+            _amount
+        );
         vToken.mint{value: _amount}();
         uint256 vBalance = vToken.balanceOf(address(this));
         TransferHelper.safeTransfer(_vAsset, _to, vBalance);
