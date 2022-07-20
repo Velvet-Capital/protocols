@@ -20,6 +20,8 @@ contract IndexFactory is Ownable
     address private baseRebalancingAddress;
     address private baseAccessControllerAddress;
 
+    IIndexSwap[] public IndexSwaplList;
+    
     event IndexCreation(
         address index,
         string _name,
@@ -111,10 +113,24 @@ contract IndexFactory is Ownable
             address(_accessController),
             tokenMetadata
         );
+        
+        IndexSwaplList.push(indexSwap);
 
          emit RebalanceCreation(address(rebalancing));
-
+         emit IndexCreation(
+            address(indexSwap),
+            _name,
+            _symbol,
+            outAsset,
+            _vault,
+            _maxInvestmentAmount,
+            address(_adapter),
+            address(_accessController)
+         );
          return address(indexSwap);
+    }
+    function getIndexList(uint256 id) external view returns (address){
+        return address(IndexSwaplList[id]);
     }
 
     function initializeTokens(

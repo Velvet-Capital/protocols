@@ -21,8 +21,8 @@ interface IIndexSwap {
     function TOTAL_WEIGHT() external view returns (uint256);
 
     function feePointBasis() external view returns (uint256);
-    function treasury() external view returns (address);
 
+    function treasury() external view returns (address);
 
     /**
      * @dev Emitted when `value` tokens are moved from one account (`from`) to

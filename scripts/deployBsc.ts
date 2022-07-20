@@ -88,14 +88,14 @@ async function main() {
   );
   await indexFactory.deployed();
 
-  await indexFactory.createIndex(
-   "DefiIndex",
-    "DIDX",
-    "",
-    "",
-    "500000000000000000000",
-    taskArgs.fee,
-  );  
+  // await indexFactory.createIndex(
+  //  "DefiIndex",
+  //   "DIDX",
+  //   "",
+  //   "",
+  //   "500000000000000000000",
+  //   taskArgs.fee,
+  // );  
 
 
   console.log("Contract indexFactory deployed to: ", indexFactory.address);
