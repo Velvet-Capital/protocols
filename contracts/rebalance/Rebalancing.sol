@@ -17,22 +17,27 @@ pragma solidity ^0.8.4 || ^0.7.6 || ^0.8.0;
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
+import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+
 
 import "../core/IndexSwapLibrary.sol";
-import "../core/Adapter.sol";
-import "../core/IndexSwap.sol";
+import "../interfaces/IAdapter.sol";
+
+import "../interfaces/IWETH.sol";
+
+import "../interfaces/IIndexSwap.sol";
 import "../access/AccessController.sol";
 import "../venus/IVBNB.sol";
 import "../venus/VBep20Interface.sol";
 import "../venus/TokenMetadata.sol";
 
-contract Rebalancing is ReentrancyGuard {
+contract Rebalancing is ReentrancyGuard, Initializable {
     bytes32 public constant ASSET_MANAGER_ROLE =
         keccak256("ASSET_MANAGER_ROLE");
 
-    IndexSwap public index;
+    IIndexSwap public index;
     IndexSwapLibrary public indexSwapLibrary;
-    Adapter public adapter;
+    IAdapter public adapter;
 
     AccessController public accessController;
     TokenMetadata public tokenMetadata;
@@ -50,18 +55,20 @@ contract Rebalancing is ReentrancyGuard {
         uint96[] newDenorms
     );
 
-    constructor(
-        IndexSwap _index,
-        IndexSwapLibrary _indexSwapLibrary,
-        Adapter _adapter,
-        AccessController _accessController,
-        TokenMetadata _tokenMetadata
-    ) {
-        index = _index;
-        indexSwapLibrary = _indexSwapLibrary;
-        adapter = _adapter;
-        accessController = _accessController;
-        tokenMetadata = _tokenMetadata;
+    constructor(){}
+  
+    function init(
+        IIndexSwap _index,
+        address _indexSwapLibrary,
+        address _adapter,
+        address _accessController,
+        address _tokenMetadata
+    ) external initializer {
+        index = IIndexSwap(_index);
+        indexSwapLibrary = IndexSwapLibrary(_indexSwapLibrary);
+        adapter = IAdapter(_adapter);
+        accessController = AccessController(_accessController);
+        tokenMetadata = TokenMetadata(_tokenMetadata);
 
         // OpenZeppelin Access Control
         accessController.setupRole(keccak256("DEFAULT_ADMIN_ROLE"), msg.sender);
@@ -77,6 +84,7 @@ contract Rebalancing is ReentrancyGuard {
             address(this)
         );
     }
+
 
     modifier onlyAssetManager() {
         require(

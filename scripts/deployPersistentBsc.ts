@@ -51,6 +51,9 @@ async function deployPersistentBsc() {
     tokenMetadata.address
   );
   console.log("Contract indexSwapLibrary deployed to: ", indexSwapLibrary.address);
+
+
+  
   console.log("------------------------------ Contract Deployment Ended ------------------------------");
   
 

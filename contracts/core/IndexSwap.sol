@@ -20,8 +20,10 @@ import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
 import "../interfaces/IWETH.sol";
+import "../interfaces/IIndexSwap.sol";
+
 import "./IndexSwapLibrary.sol";
-import "./Adapter.sol";
+import "../interfaces/IAdapter.sol";
 import "../access/AccessController.sol";
 import "../venus/IVBNB.sol";
 import "../venus/VBep20Interface.sol";
@@ -68,23 +70,25 @@ contract IndexSwap is TokenBase {
 
     address public outAsset;
     IndexSwapLibrary public indexSwapLibrary;
-    Adapter public adapter;
+    IAdapter public adapter;
     AccessController public accessController;
     TokenMetadata public tokenMetadata;
 
     uint256 public feePointBasis;
     address public treasury;
 
-    constructor(
+    // constructor() { }
+
+      constructor(
         string memory _name,
         string memory _symbol,
         address _outAsset,
         address _vault,
         uint256 _maxInvestmentAmount,
-        IndexSwapLibrary _indexSwapLibrary,
-        Adapter _adapter,
-        AccessController _accessController,
-        TokenMetadata _tokenMetadata,
+        address _indexSwapLibrary,
+        address _adapter,
+        address _accessController,
+        address _tokenMetadata,
         uint256 _feePointBasis,
         address _treasury
     ) TokenBase(_name, _symbol) {
@@ -92,9 +96,9 @@ contract IndexSwap is TokenBase {
         outAsset = _outAsset; //As now we are tacking busd
         MAX_INVESTMENTAMOUNT = _maxInvestmentAmount;
         indexSwapLibrary = IndexSwapLibrary(_indexSwapLibrary);
-        adapter = Adapter(_adapter);
-        accessController = _accessController;
-        tokenMetadata = _tokenMetadata;
+        adapter =IAdapter(_adapter);
+        accessController = AccessController(_accessController);
+        tokenMetadata = TokenMetadata(_tokenMetadata);
         paused = false;
 
         feePointBasis = _feePointBasis;
@@ -115,7 +119,7 @@ contract IndexSwap is TokenBase {
      * @param tokens Underlying tokens to initialize the pool with
      * @param denorms Initial denormalized weights for the tokens
      */
-    function init(address[] calldata tokens, uint96[] calldata denorms)
+    function initToken(address[] calldata tokens, uint96[] calldata denorms)
         external
         onlyOwner
     {
@@ -177,10 +181,10 @@ contract IndexSwap is TokenBase {
         uint256[] memory tokenBalanceInBNB = new uint256[](len);
 
         (tokenBalanceInBNB, vaultBalance) = indexSwapLibrary
-            .getTokenAndVaultBalance(this);
+            .getTokenAndVaultBalance(IIndexSwap(address(this)));
 
         amount = indexSwapLibrary.calculateSwapAmounts(
-            this,
+            IIndexSwap(address(this)),
             tokenAmount,
             tokenBalanceInBNB,
             vaultBalance
@@ -227,7 +231,7 @@ contract IndexSwap is TokenBase {
 
         for (uint256 i = 0; i < _tokens.length; i++) {
             uint256 tokenBalance = indexSwapLibrary.getTokenBalance(
-                this,
+                IIndexSwap(address(this)),
                 _tokens[i],
                 adapter.getETH() == _tokens[i]
             );
@@ -239,7 +243,7 @@ contract IndexSwap is TokenBase {
             if (_tokens[i] == adapter.getETH()) {
                 if (tokenMetadata.vTokens(_tokens[i]) != address(0)) {
                     adapter._pullFromVault(
-                        this,
+                        IIndexSwap(address(this)),
                         _tokens[i],
                         amount,
                         address(adapter)
@@ -252,7 +256,7 @@ contract IndexSwap is TokenBase {
                     );
                 } else {
                     adapter._pullFromVault(
-                        this,
+                        IIndexSwap(address(this)),
                         _tokens[i],
                         amount,
                         address(this)
@@ -267,7 +271,7 @@ contract IndexSwap is TokenBase {
                 }
             } else {
                 adapter._pullFromVault(
-                    this,
+                    IIndexSwap(address(this)),
                     _tokens[i],
                     amount,
                     address(adapter)
@@ -306,7 +310,7 @@ contract IndexSwap is TokenBase {
             );
 
             investedAmountAfterSlippage = investedAmountAfterSlippage.add(
-                indexSwapLibrary._getTokenAmountInBNB(this, t, swapResult)
+                indexSwapLibrary._getTokenAmountInBNB(IIndexSwap(address(this)), t, swapResult)
             );
         }
     }

@@ -5,12 +5,14 @@ import "@nomiclabs/hardhat-waffle";
 import "@nomiclabs/hardhat-ethers";
 import "@typechain/hardhat";
 import "@openzeppelin/hardhat-upgrades";
+import 'hardhat-contract-sizer';
 import "solidity-coverage";
 import "./tasks/accounts";
 import "./tasks/balance";
 import "./tasks/block-number";
 import "./tasks/deployIndexSwap";
 import "./tasks/setTokenIndexSwap";
+import "./tasks/createIndex";
 
 import { HardhatUserConfig } from "hardhat/types";
 import { chainIdToAddresses } from "./scripts/networkVariables";

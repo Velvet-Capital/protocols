@@ -15,35 +15,44 @@
 pragma solidity ^0.8.4 || ^0.7.6 || ^0.8.0;
 
 import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
+
+import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+
+
+import "../interfaces/IIndexSwap.sol";
 import "../interfaces/IUniswapV2Router02.sol";
 import "../interfaces/IWETH.sol";
 
 import "../core/IndexSwapLibrary.sol";
-import "./IndexSwap.sol";
+
 import "../access/AccessController.sol";
-import "../vault/VelvetSafeModule.sol";
+import "../interfaces/IVelvetSafeModule.sol";
+
+// import "../vault/VelvetSafeModule.sol";
 import "../venus/VBep20Interface.sol";
 import "../venus/IVBNB.sol";
 import "../venus/TokenMetadata.sol";
 
-contract Adapter {
+contract Adapter  is
+ Initializable {
     IUniswapV2Router02 public pancakeSwapRouter;
     AccessController public accessController;
-    VelvetSafeModule internal gnosisSafe;
+    IVelvetSafeModule internal gnosisSafe;
     TokenMetadata public tokenMetadata;
 
-    constructor(
-        AccessController _accessController,
-        address _pancakeSwapAddress,
-        VelvetSafeModule _velvetSafeModule,
-        TokenMetadata _tokenMetadata
-    ) {
-        pancakeSwapRouter = IUniswapV2Router02(_pancakeSwapAddress);
-        accessController = _accessController;
-        gnosisSafe = _velvetSafeModule;
-        tokenMetadata = _tokenMetadata;
-    }
+    constructor() {}
 
+    function init(
+        address _accessController,
+        address _pancakeSwapAddress,
+        address _velvetSafeModule,
+        address _tokenMetadata
+    )  external initializer   {
+        pancakeSwapRouter = IUniswapV2Router02(_pancakeSwapAddress);
+        accessController = AccessController(_accessController);
+        gnosisSafe = IVelvetSafeModule(_velvetSafeModule);
+        tokenMetadata = TokenMetadata(_tokenMetadata);
+    }
     /**
      * @return Returns the address of the base token (WETH, WBNB, ...)
      */
@@ -63,7 +72,7 @@ contract Adapter {
      * @notice Transfer tokens from vault to a specific address
      */
     function _pullFromVault(
-        IndexSwap _index,
+        IIndexSwap _index,
         address t,
         uint256 amount,
         address to
@@ -306,6 +315,6 @@ contract Adapter {
         return path;
     }
 
-    // important to receive ETH
-    receive() external payable {}
+    // // important to receive ETH
+    // receive() external payable {}
 }

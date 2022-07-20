@@ -15,7 +15,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
 import "../interfaces/IPriceOracle.sol";
-import "../core/IndexSwap.sol";
+import "../interfaces/IIndexSwap.sol";
 import "../venus/VBep20Interface.sol";
 import "../venus/IVBNB.sol";
 import "../venus/TokenMetadata.sol";
@@ -43,7 +43,7 @@ contract IndexSwapLibrary {
      * @return tokenXBalance A list of the value of each token in the portfolio in BNB
      * @return vaultValue The total vault value in BNB
      */
-    function getTokenAndVaultBalance(IndexSwap _index)
+    function getTokenAndVaultBalance(IIndexSwap _index)
         public
         returns (uint256[] memory tokenXBalance, uint256 vaultValue)
     {
@@ -108,7 +108,7 @@ contract IndexSwapLibrary {
      * @return tokenBalance of the specific token
      */
     function getTokenBalance(
-        IndexSwap _index,
+        IIndexSwap _index,
         address t,
         bool weth
     ) public view returns (uint256 tokenBalance) {
@@ -136,7 +136,7 @@ contract IndexSwapLibrary {
      * @return A list of amounts that are being swapped into the portfolio tokens
      */
     function calculateSwapAmounts(
-        IndexSwap _index,
+        IIndexSwap _index,
         uint256 tokenAmount,
         uint256[] memory tokenBalanceInBNB,
         uint256 vaultBalance
@@ -159,7 +159,7 @@ contract IndexSwapLibrary {
      * @return amountInBNB The converted BNB amount
      */
     function _getTokenAmountInBNB(
-        IndexSwap _index,
+        IIndexSwap _index,
         address t,
         uint256 amount
     ) public view returns (uint256 amountInBNB) {
