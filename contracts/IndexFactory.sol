@@ -19,8 +19,14 @@ contract IndexFactory is Ownable
     address private baseAdapterAddress;
     address private baseRebalancingAddress;
     address private baseAccessControllerAddress;
+     
+    struct IndexSwaplInfo {
+        address indexSwap;
+        address rebalancing;
+        address owner;
+    }
 
-    IIndexSwap[] public IndexSwaplList;
+    IndexSwaplInfo[] public IndexSwapInfolList;
     
     event IndexCreation(
         address index,
@@ -111,10 +117,11 @@ contract IndexFactory is Ownable
             indexSwapLibrary,
             address(_adapter),
             address(_accessController),
-            tokenMetadata
+            tokenMetadata,
+             owner()
         );
         
-        IndexSwaplList.push(indexSwap);
+        IndexSwapInfolList.push(IndexSwaplInfo(address(indexSwap),address(rebalancing), owner()));
 
          emit RebalanceCreation(address(rebalancing));
          emit IndexCreation(
@@ -129,16 +136,46 @@ contract IndexFactory is Ownable
          );
          return address(indexSwap);
     }
-    function getIndexList(uint256 id) external view returns (address){
-        return address(IndexSwaplList[id]);
+    function validIndexId(uint256 indexfundId) public view returns (bool) {
+        if (indexfundId >= 0 && indexfundId <= IndexSwapInfolList.length - 1) return true;
+    }
+  
+    function getIndexList(uint256 indexfundId) external view returns (address){
+        return address(IndexSwapInfolList[indexfundId].indexSwap);
     }
 
     function initializeTokens(
-        address _index,
+        uint256 indexfundId,
         address[] calldata _tokens,
         uint96[] calldata _denorms
-    ) public {
-         //_index.initToken(_tokens, _denorms);
-            IIndexSwap(_index).initToken(_tokens, _denorms);
+    ) public onlyOwner {
+         require(validIndexId(indexfundId), "Not a valid Id");
+        IIndexSwap(IndexSwapInfolList[indexfundId].indexSwap).initToken(_tokens, _denorms);
     }
+
+    function setPause(
+        uint256 indexfundId,
+        bool _state
+    ) public onlyOwner {
+            require(validIndexId(indexfundId), "Not a valid Id");
+            IRebalancing(IndexSwapInfolList[indexfundId].rebalancing).setPause(_state);
+    }
+
+    function updateTokens(
+        uint256 indexfundId, 
+        address[] calldata _tokens,
+        uint96[] calldata _denorms) public onlyOwner {
+         IRebalancing(IndexSwapInfolList[indexfundId].rebalancing).updateTokens(_tokens,_denorms);
+    }
+
+    function updateWeights(
+        uint256 indexfundId, 
+        uint96[] calldata _denorms) public onlyOwner {
+         IRebalancing(IndexSwapInfolList[indexfundId].rebalancing).updateWeights(_denorms);
+    }
+
+    function feeModule(uint256 indexfundId) public onlyOwner {
+         IRebalancing(IndexSwapInfolList[indexfundId].rebalancing).feeModule();
+    }
+
 }

@@ -33,7 +33,7 @@ import "../venus/TokenMetadata.sol";
 
 contract Rebalancing is ReentrancyGuard, Initializable {
     bytes32 public constant ASSET_MANAGER_ROLE =
-        keccak256("ASSET_MANAGER_ROLE");
+    keccak256("ASSET_MANAGER_ROLE");
 
     IIndexSwap public index;
     IndexSwapLibrary public indexSwapLibrary;
@@ -62,7 +62,8 @@ contract Rebalancing is ReentrancyGuard, Initializable {
         address _indexSwapLibrary,
         address _adapter,
         address _accessController,
-        address _tokenMetadata
+        address _tokenMetadata,
+        address _owner
     ) external initializer {
         index = IIndexSwap(_index);
         indexSwapLibrary = IndexSwapLibrary(_indexSwapLibrary);
@@ -71,8 +72,8 @@ contract Rebalancing is ReentrancyGuard, Initializable {
         tokenMetadata = TokenMetadata(_tokenMetadata);
 
         // OpenZeppelin Access Control
-        accessController.setupRole(keccak256("DEFAULT_ADMIN_ROLE"), msg.sender);
-        accessController.setupRole(keccak256("ASSET_MANAGER_ROLE"), msg.sender);
+        accessController.setupRole(keccak256("DEFAULT_ADMIN_ROLE"), _owner);
+        accessController.setupRole(keccak256("ASSET_MANAGER_ROLE"), _owner);
 
         accessController.setupRole(
             keccak256("INDEX_MANAGER_ROLE"),

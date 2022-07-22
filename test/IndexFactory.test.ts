@@ -1,18 +1,20 @@
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
 import { ethers, upgrades } from "hardhat";
-import { BigNumber } from "ethers";
-const { abi: IndexSwapABI } = require("../artifacts/contracts/core/IndexSwap.sol/IndexSwap.json");
+import { BigNumber, Contract } from "ethers";
 import {
   IndexSwap,
+  IndexSwap__factory,
   PriceOracle,
   IERC20__factory,
   IndexSwapLibrary,
   Adapter,
+  Rebalancing__factory,
   Rebalancing,
   AccessController,
   TokenMetadata,
   VelvetSafeModule,
+  IndexFactory
 } from "../typechain";
 
 import { chainIdToAddresses } from "../scripts/networkVariables";
@@ -30,7 +32,6 @@ import {
 } from "@gnosis.pm/safe-core-sdk-types";
 
 import { getSafeContract } from "@gnosis.pm/safe-core-sdk/dist/src/contracts/safeDeploymentContracts";
-
 var chai = require("chai");
 //use default BigNumber
 chai.use(require("chai-bignumber")());
@@ -38,10 +39,11 @@ chai.use(require("chai-bignumber")());
 describe.only("Tests for IndexSwap", () => {
   let accounts;
   let priceOracle: PriceOracle;
-  let indexSwap: IndexSwap;
+  let indexSwap: any;
   let indexSwapLibrary: IndexSwapLibrary;
+  let indexFactory:IndexFactory;
   let adapter: Adapter;
-  let rebalancing: Rebalancing;
+  let rebalancing: any;
   let tokenMetadata: TokenMetadata;
   let accessController: AccessController;
   let velvetSafeModule: VelvetSafeModule;
@@ -229,40 +231,44 @@ describe.only("Tests for IndexSwap", () => {
       // await indexSwap.deployed();
 
       const Rebalancing = await ethers.getContractFactory("Rebalancing");
-      rebalancing = await Rebalancing.deploy();
-      await rebalancing.deployed();
+      const rebalancingDefult = await Rebalancing.deploy();
+      await rebalancingDefult.deployed();
 
-      if (
-        velvetSafeModule.address != "0x0000000000000000000000000000000000000000"
-      ) {
-        await velvetSafeModule.addOwner(adapter.address);
-      }
+   
 
 
 
     const IndexFactory = await ethers.getContractFactory("IndexFactory");
-    const indexFactory = await IndexFactory.deploy(
+     indexFactory = await IndexFactory.deploy(
       addresses.PancakeSwapRouterAddress,
       addresses.WETH_Address,
       accounts[1].address,
       indexSwapLibrary.address,
       tokenMetadata.address,
       adapter.address,
-      rebalancing.address,
+      rebalancingDefult.address,
       accessController.address
     );
     
      const indexFactoryCreate =await indexFactory.createIndex(
-      "DEFI Index",
-      "DFI",
+      "INDEXLY",
+      "IDX",
       newSafeAddress,
       velvetSafeModule.address,
       "500000000000000000000",
       "1",
     );
     const indexAddress = await indexFactory.getIndexList(0);
+    const indexInfo = await indexFactory.IndexSwapInfolList(0);
+
     console.log(indexAddress,"indexSwapAddress");
-    indexSwap = await ethers.getContractAt(IndexSwapABI, indexAddress);
+    indexSwap= await ethers.getContractAt(IndexSwap__factory.abi , indexAddress);
+    rebalancing= await ethers.getContractAt(Rebalancing__factory.abi , indexInfo.rebalancing);
+    if (
+      velvetSafeModule.address != "0x0000000000000000000000000000000000000000"
+    ) {
+      await velvetSafeModule.addOwner(await indexSwap.adapter());
+    }
 
       await busdInstance
         .connect(vault)
@@ -284,14 +290,16 @@ describe.only("Tests for IndexSwap", () => {
       });
       it("initialize should revert if total Weights not equal 10,000", async () => {
         await expect(
-          indexSwap.initToken(
+          indexFactory.initializeTokens(
+            0,
             [busdInstance.address, ethInstance.address],
             [100, 1000]
           )
         ).to.be.revertedWith("INVALID_WEIGHTS");
       });
       it("Initialize IndexFund Tokens", async () => {
-        await indexSwap.initToken(
+        await indexFactory.initializeTokens(
+          0,
           [busdInstance.address, ethInstance.address],
           [5000, 5000]
         );

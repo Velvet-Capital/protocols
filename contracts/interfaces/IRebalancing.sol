@@ -33,7 +33,8 @@ interface IRebalancing {
         address _indexSwapLibrary,
         address _adapter,
         address _accessController,
-        address _tokenMetadata
+        address _tokenMetadata,
+        address _owner
     ) external ;
 
     /**
