@@ -60,6 +60,7 @@
     "@gnosis.pm/zodiac": "^1.0.11",
     "@uniswap/lib": "^4.0.1-alpha",
     "@uniswap/sdk": "^3.0.3",
+    "@uniswap/v2-periphery": "^1.1.0-beta.0",
     "chai-bignumber": "^3.0.0"
   }
 }

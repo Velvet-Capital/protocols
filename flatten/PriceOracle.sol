@@ -1,8 +1,6 @@
 // Sources flattened with hardhat v2.9.3 https://hardhat.org
 
-// File contracts/lib/UQ112x112.sol
-
-pragma solidity 0.8.4;
+pragma solidity ^0.8.4;
 
 // a library for handling binary fixed point numbers (https://en.wikipedia.org/wiki/Q_(number_format))
 
