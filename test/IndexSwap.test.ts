@@ -174,11 +174,22 @@ describe.only("Tests for IndexSwap", () => {
         safeTransaction
       );
       await executeTxResponse.transactionResponse?.wait();
-
       const PriceOracle = await ethers.getContractFactory("PriceOracle");
       priceOracle = await PriceOracle.deploy();
       await priceOracle.deployed();
-      priceOracle.initialize(addresses.PancakeSwapRouterAddress);
+
+      await priceOracle.initPair("0x61EB789d75A95CAa3fF50ed7E47b96c132fEc082"); // WBNB, BTC
+      await priceOracle.initPair("0x74E4716E431f45807DCF19f284c7aA99F18a4fbc"); // WBNB, ETH
+      await priceOracle.initPair("0x58F876857a02D6762E0101bb5C46A8c1ED44Dc16"); // WBNB, BUSD
+      await priceOracle.initPair("0xc7c3cCCE4FA25700fD5574DA7E200ae28BBd36A3"); // WBNB, DAI
+
+      // Timeout
+      setTimeout(() => {}, 10000);
+
+      await priceOracle.update("0x61EB789d75A95CAa3fF50ed7E47b96c132fEc082"); // WBNB, BTC
+      await priceOracle.update("0x74E4716E431f45807DCF19f284c7aA99F18a4fbc"); // WBNB, ETH
+      await priceOracle.update("0x58F876857a02D6762E0101bb5C46A8c1ED44Dc16"); // WBNB, BUSD
+      await priceOracle.update("0xc7c3cCCE4FA25700fD5574DA7E200ae28BBd36A3"); // WBNB, DAI
 
       const TokenMetadata = await ethers.getContractFactory("TokenMetadata");
       tokenMetadata = await TokenMetadata.deploy();
@@ -296,6 +307,7 @@ describe.only("Tests for IndexSwap", () => {
           value: "100000000000000000",
         });
         const indexSupplyAfter = await indexSwap.totalSupply();
+        console.log(indexSupplyAfter);
 
         expect(Number(indexSupplyAfter)).to.be.greaterThanOrEqual(
           Number(indexSupplyBefore)
@@ -315,6 +327,7 @@ describe.only("Tests for IndexSwap", () => {
           value: "2000000000000000000",
         });
         const indexSupplyAfter = await indexSwap.totalSupply();
+        console.log(indexSupplyAfter);
 
         expect(Number(indexSupplyAfter)).to.be.greaterThanOrEqual(
           Number(indexSupplyBefore)
@@ -333,6 +346,7 @@ describe.only("Tests for IndexSwap", () => {
         expect(Number(indexSupplyAfter)).to.be.greaterThanOrEqual(
           Number(indexSupplyBefore)
         );
+        console.log(indexSupplyAfter);
       });
 
       it("Investment should fail when contract is paused", async () => {

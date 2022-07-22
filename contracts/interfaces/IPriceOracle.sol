@@ -4,10 +4,15 @@ pragma solidity ^0.8.4;
 interface IPriceOracle {
     function initialize(address _uniSwapRouter) external;
 
-    function getDecimal(address tokenAddress) external view returns (uint256);
+    function initPair(address _pair) external;
 
-    function getTokenPrice(address token_address, address token1_address)
-        external
-        view
-        returns (uint256);
+    function update(address _pair) external;
+
+    function getTokenPrice(
+        address _token0,
+        address _token1,
+        uint256 amountIn
+    ) external view returns (uint224 amountOut);
+
+    function getBlockTimestamp() external view returns (uint32);
 }

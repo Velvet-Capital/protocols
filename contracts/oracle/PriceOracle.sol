@@ -1,122 +1,148 @@
-// SPDX-License-Identifier: UNLICENSED
-
-/**
- * @title PriceOracle
- * @author Velvet.Capital
- * @notice This contract is used for getting live prices of particular token and token pair 
- * @dev This contract includes functionalities:
- *      1. Get live prices for a particular pair
- *      2. Get pair address for the particular token
- */
-
 pragma solidity ^0.8.4;
-
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 
 import "../interfaces/IUniswapV2Pair.sol";
 import "../interfaces/IPriceOracle.sol";
-import "../interfaces/IUniswapV2Router02.sol";
 import "../interfaces/IUniswapV2Factory.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 
-contract PriceOracle is IPriceOracle {
-    using SafeMath for uint256;
+import "../lib/FixedPoint.sol";
+import "../lib/UniswapV2OracleLibrary.sol";
 
-    IUniswapV2Router02 public uniswapV2Router;
+contract PriceOracle {
+    //using FixedPoint for *;
+    using FixedPoint for *;
 
-    function initialize(address _uniSwapRouter) external override {
-        IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(
-            _uniSwapRouter
-        );
-        uniswapV2Router = _uniswapV2Router;
+    struct PriceInformation {
+        address token0;
+        address token1;
+        uint256 price0CumulativeLast;
+        uint256 price1CumulativeLast;
+        uint32 blockTimestampLast;
+        FixedPoint.uq112x112 price0Average;
+        FixedPoint.uq112x112 price1Average;
     }
 
-    function getPairAddress(address _assetOne, address _assetTwo)
+    // Time until next update
+    uint256 public constant PERIOD = 10;
+
+    mapping(address => PriceInformation) pairInformation;
+
+    function getPair(address t1, address t2)
         public
         view
-        returns (address)
+        returns (address pair)
     {
-        address pair = IUniswapV2Factory(uniswapV2Router.factory()).getPair(
-            _assetOne,
-            _assetTwo
+        IUniswapV2Factory factory = IUniswapV2Factory(
+            0xcA143Ce32Fe78f1f7019d7d551a6402fC5350c73
         );
-        return pair;
+        pair = factory.getPair(t1, t2);
+    }
+
+    function initPair(address _pair) public {
+        IUniswapV2Pair pair = IUniswapV2Pair(_pair);
+
+        uint32 lastTimeStamp;
+        (, , lastTimeStamp) = pair.getReserves();
+
+        (
+            uint256 price0Cumulative,
+            uint256 price1Cumulative,
+
+        ) = UniswapV2OracleLibrary.currentCumulativePrices(_pair);
+
+        uint32 timeElapsed = getBlockTimestamp() - lastTimeStamp;
+
+        PriceInformation memory priceInformation = PriceInformation({
+            token0: pair.token0(),
+            token1: pair.token1(),
+            price0CumulativeLast: pair.price0CumulativeLast(),
+            price1CumulativeLast: pair.price1CumulativeLast(),
+            blockTimestampLast: lastTimeStamp,
+            price0Average: FixedPoint.uq112x112(
+                uint224(
+                    (price0Cumulative -
+                        pair.price0CumulativeLast() /
+                        timeElapsed)
+                )
+            ),
+            price1Average: FixedPoint.uq112x112(
+                uint224(
+                    (price1Cumulative -
+                        pair.price1CumulativeLast() /
+                        timeElapsed)
+                )
+            )
+        });
+
+        pairInformation[_pair] = priceInformation;
+    }
+
+    function update(address _pair) external {
+        (
+            uint256 price0Cumulative,
+            uint256 price1Cumulative,
+            uint32 blockTimestamp
+        ) = UniswapV2OracleLibrary.currentCumulativePrices(_pair);
+
+        uint32 timeElapsed = blockTimestamp -
+            pairInformation[_pair].blockTimestampLast;
+
+        // ensure that at least one full period has passed since the last update
+        require(
+            timeElapsed >= PERIOD,
+            "ExampleOracleSimple: PERIOD_NOT_ELAPSED"
+        );
+
+        pairInformation[_pair].price0Average = FixedPoint.uq112x112(
+            uint224(
+                (price0Cumulative -
+                    pairInformation[_pair].price0CumulativeLast) / timeElapsed
+            )
+        );
+        pairInformation[_pair].price1Average = FixedPoint.uq112x112(
+            uint224(
+                (price1Cumulative -
+                    pairInformation[_pair].price1CumulativeLast) / timeElapsed
+            )
+        );
+
+        pairInformation[_pair].price0CumulativeLast = price0Cumulative;
+        pairInformation[_pair].price1CumulativeLast = price1Cumulative;
+        pairInformation[_pair].blockTimestampLast = blockTimestamp;
     }
 
     /**
-     * @notice Fetches and sorts the reserves for a pair.
-     * @param tokenA Address of tokenA contract
-     * @param tokenB Address of tokenB contract
+     * @notice Returns the amount of _token1 for the input amount of _token0
+     * @param _token0 address of input BEP20 token contract
+     * @param _token1 address of output BEP20 token contract
+     * @param amountIn amount of token0
      */
+    function getTokenPrice(
+        address _token0,
+        address _token1,
+        uint256 amountIn
+    ) external view returns (uint224 amountOut) {
+        address pair = getPair(_token0, _token1);
+        require(
+            _token0 == pairInformation[pair].token0 ||
+                _token0 == pairInformation[pair].token1,
+            "invalid token"
+        );
 
-    function getReserves(address tokenA, address tokenB)
-        internal
-        view
-        returns (uint256 reserveA, uint256 reserveB)
-    {
-        address pair = getPairAddress(tokenA, tokenB);
-        (uint256 reserve0, uint256 reserve1, ) = IUniswapV2Pair(pair)
-            .getReserves();
-
-        (address token0, ) = sortTokens(tokenA, tokenB);
-        (reserveA, reserveB) = tokenA == token0
-            ? (reserve0, reserve1)
-            : (reserve1, reserve0);
-    }
-
-    /**
-     * @notice Returns sorted token addresses, used to handle return values from pairs sorted in this order.
-     * @param tokenA Address of tokenA contract
-     * @param tokenB Address of tokenB contract
-     */
-
-    function sortTokens(address tokenA, address tokenB)
-        internal
-        pure
-        returns (address token0, address token1)
-    {
-        require(tokenA != tokenB, "PancakeLibrary: IDENTICAL_ADDRESSES");
-        (token0, token1) = tokenA < tokenB
-            ? (tokenA, tokenB)
-            : (tokenB, tokenA);
-        require(token0 != address(0), "PancakeLibrary: ZERO_ADDRESS");
-    }
-
-    function getDecimal(address tokenAddress)
-        external
-        view
-        override
-        returns (uint256)
-    {
-        return IERC20Metadata(tokenAddress).decimals();
-    }
-
-    /**
-
-     * @notice Returns the USD price for a particular BEP20 token.
-     * @param token_address address of BEP20 token contract
-     * @param token1_address address of USDT token contract
-     */
-    function getTokenPrice(address token_address, address token1_address)
-        external
-        view
-        override
-        returns (uint256 price)
-    {
-        uint256 token_decimals = IERC20Metadata(token_address).decimals();
-        uint256 min_amountIn = 1 * 10**token_decimals;
-        if (token_address == token1_address) {
-            price = min_amountIn;
+        if (_token0 == pairInformation[pair].token0) {
+            amountOut = pairInformation[pair]
+                .price0Average
+                .mul(amountIn)
+                .decode144();
         } else {
-            (uint256 reserve0, uint256 reserve1) = getReserves(
-                token_address,
-                token1_address
-            );
-            price = uniswapV2Router.getAmountOut(
-                min_amountIn,
-                reserve0,
-                reserve1
-            );
+            amountOut = pairInformation[pair]
+                .price1Average
+                .mul(amountIn)
+                .decode144();
         }
+    }
+
+    function getBlockTimestamp() public view returns (uint32) {
+        return uint32(block.timestamp % 2**32);
     }
 }

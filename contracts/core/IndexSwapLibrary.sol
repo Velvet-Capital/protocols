@@ -167,8 +167,6 @@ contract IndexSwapLibrary {
             return amount;
         }
 
-        uint256 decimal = oracle.getDecimal(t);
-        uint256 tokenPrice = oracle.getTokenPrice(t, _index.outAsset());
-        amountInBNB = tokenPrice.mul(amount).div(10**decimal);
+        amountInBNB = oracle.getTokenPrice(t, _index.outAsset(), amount);
     }
 }
