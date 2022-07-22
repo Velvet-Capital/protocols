@@ -152,30 +152,4 @@ contract IndexFactory is Ownable
          require(validIndexId(indexfundId), "Not a valid Id");
         IIndexSwap(IndexSwapInfolList[indexfundId].indexSwap).initToken(_tokens, _denorms);
     }
-
-    function setPause(
-        uint256 indexfundId,
-        bool _state
-    ) public onlyOwner {
-            require(validIndexId(indexfundId), "Not a valid Id");
-            IRebalancing(IndexSwapInfolList[indexfundId].rebalancing).setPause(_state);
-    }
-
-    function updateTokens(
-        uint256 indexfundId, 
-        address[] calldata _tokens,
-        uint96[] calldata _denorms) public onlyOwner {
-         IRebalancing(IndexSwapInfolList[indexfundId].rebalancing).updateTokens(_tokens,_denorms);
-    }
-
-    function updateWeights(
-        uint256 indexfundId, 
-        uint96[] calldata _denorms) public onlyOwner {
-         IRebalancing(IndexSwapInfolList[indexfundId].rebalancing).updateWeights(_denorms);
-    }
-
-    function feeModule(uint256 indexfundId) public onlyOwner {
-         IRebalancing(IndexSwapInfolList[indexfundId].rebalancing).feeModule();
-    }
-
 }
