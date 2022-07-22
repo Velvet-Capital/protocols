@@ -2,7 +2,6 @@ pragma solidity ^0.8.4;
 
 import "../interfaces/IUniswapV2Pair.sol";
 import "../interfaces/IPriceOracle.sol";
-import "../interfaces/IUniswapV2Router02.sol";
 import "../interfaces/IUniswapV2Factory.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
@@ -25,38 +24,73 @@ contract PriceOracleNew {
     }
 
     // Time until next update
-    uint256 public constant PERIOD = 1 hours;
+    uint256 public constant PERIOD = 10;
 
     mapping(address => PriceInformation) pairInformation;
 
-    IUniswapV2Router02 public uniswapV2Router;
+    function getPrice0Avg(address pair) public view returns (uint224 amount) {
+        amount = pairInformation[pair].price0Average.decode();
+    }
 
-    function initialize(address _uniSwapRouter) external {
-        IUniswapV2Router02 _uniswapV2Router = IUniswapV2Router02(
-            _uniSwapRouter
+    function getPrice1Avg(address pair) public view returns (uint224 amount) {
+        amount = pairInformation[pair].price1Average.decode();
+    }
+
+    function getPriceCumm(address pair) public view returns (uint256 amount) {
+        amount = pairInformation[pair].price0CumulativeLast;
+    }
+
+    function getPrice1Cumm(address pair) public view returns (uint256 amount) {
+        amount = pairInformation[pair].price1CumulativeLast;
+    }
+
+    function getDecimal(address tokenAddress) external view returns (uint256) {
+        return IERC20Metadata(tokenAddress).decimals();
+    }
+
+    function getPair(address t1, address t2)
+        public
+        view
+        returns (address pair)
+    {
+        IUniswapV2Factory factory = IUniswapV2Factory(
+            0xcA143Ce32Fe78f1f7019d7d551a6402fC5350c73
         );
-        uniswapV2Router = _uniswapV2Router;
+        pair = factory.getPair(t1, t2);
     }
 
     function initPair(address _pair) public {
         IUniswapV2Pair pair = IUniswapV2Pair(_pair);
+
+        uint32 lastTimeStamp;
+        (, , lastTimeStamp) = pair.getReserves();
+
+        (
+            uint256 price0Cumulative,
+            uint256 price1Cumulative,
+
+        ) = UniswapV2OracleLibrary.currentCumulativePrices(_pair);
+
+        uint32 timeElapsed = getBlockTimestamp() - lastTimeStamp;
 
         PriceInformation memory priceInformation = PriceInformation({
             token0: pair.token0(),
             token1: pair.token1(),
             price0CumulativeLast: pair.price0CumulativeLast(),
             price1CumulativeLast: pair.price1CumulativeLast(),
-            blockTimestampLast: uint32(block.timestamp),
+            blockTimestampLast: lastTimeStamp,
             price0Average: FixedPoint.uq112x112(
                 uint224(
-                    (pair.price0CumulativeLast() -
-                        pair.price0CumulativeLast()) / 1
+                    (price0Cumulative -
+                        pair.price0CumulativeLast() /
+                        timeElapsed)
                 )
             ),
             price1Average: FixedPoint.uq112x112(
                 uint224(
-                    (pair.price1CumulativeLast() -
-                        pair.price1CumulativeLast()) / 1
+                    (price1Cumulative -
+                        pair.price1CumulativeLast() /
+                        timeElapsed)
                 )
             )
         });
@@ -88,7 +122,7 @@ contract PriceOracleNew {
         );
         pairInformation[_pair].price1Average = FixedPoint.uq112x112(
             uint224(
-                (price0Cumulative -
+                (price1Cumulative -
                     pairInformation[_pair].price1CumulativeLast) / timeElapsed
             )
         );
@@ -99,41 +133,30 @@ contract PriceOracleNew {
     }
 
     /**
-     * @notice Returns the USD price for a particular BEP20 token.
-     * @param token_address address of BEP20 token contract
-     * @param token1_address address of USDT token contract
+     * @notice Returns the amount of _token1 for the input amount of _token0
+     * @param _token0 address of input BEP20 token contract
+     * @param _token1 address of output BEP20 token contract
+     * @param amountIn amount of token0
      */
     function getTokenPrice(
-        address token_address,
-        address token1_address,
-        address _pair,
+        address _token0,
+        address _token1,
         uint256 amountIn
     ) external view returns (uint224 amountOut) {
+        address pair = getPair(_token0, _token1);
         require(
-            token_address == pairInformation[_pair].token0 ||
-                token_address == pairInformation[_pair].token1,
+            _token0 == pairInformation[pair].token0 ||
+                _token0 == pairInformation[pair].token1,
             "invalid token"
         );
 
-        if (token_address == pairInformation[_pair].token0) {
-            amountOut = pairInformation[_pair]
+        if (_token0 == pairInformation[pair].token0) {
+            amountOut = pairInformation[pair]
                 .price0Average
                 .mul(amountIn)
                 .decode144();
         } else {
-            amountOut = pairInformation[_pair]
-                .price1Average
-                .mul(amountIn)
-                .decode144();
-        }
-
-        if (token_address == pairInformation[_pair].token0) {
-            amountOut = pairInformation[_pair]
-                .price0Average
-                .mul(amountIn)
-                .decode144();
-        } else {
-            amountOut = pairInformation[_pair]
+            amountOut = pairInformation[pair]
                 .price1Average
                 .mul(amountIn)
                 .decode144();
