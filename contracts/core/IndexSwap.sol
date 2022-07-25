@@ -87,7 +87,7 @@ contract IndexSwap is TokenBase {
         TokenMetadata _tokenMetadata,
         uint256 _feePointBasis,
         address _treasury
-    ) TokenBase(_name, _symbol) {
+    )  TokenBase(_name, _symbol) {
         vault = _vault;
         outAsset = _outAsset; //As now we are tacking busd
         MAX_INVESTMENTAMOUNT = _maxInvestmentAmount;
@@ -163,7 +163,7 @@ contract IndexSwap is TokenBase {
             because during the swap the amount will change but the index token balance is still the same 
             (before minting)
      */
-    function investInFund() public payable nonReentrant {
+    function investInFund(uint _slippage) public payable nonReentrant {
         require(!paused, "The contract is paused !");
         uint256 tokenAmount = msg.value;
         require(_tokens.length != 0, "NOT INITIALIZED");
@@ -187,7 +187,7 @@ contract IndexSwap is TokenBase {
             vaultBalance
         );
 
-        investedAmountAfterSlippage = _swapETHToTokens(tokenAmount, amount);
+        investedAmountAfterSlippage = _swapETHToTokens(tokenAmount, amount, _slippage);
         require(
             investedAmountAfterSlippage <= tokenAmount,
             "amount after slippage can't be greater than before"
@@ -215,7 +215,7 @@ contract IndexSwap is TokenBase {
                BNB and returns it to the user and burns the amount of index token being withdrawn
      * @param tokenAmount The index token amount the user wants to withdraw from the fund
      */
-    function withdrawFund(uint256 tokenAmount) public nonReentrant {
+    function withdrawFund(uint256 tokenAmount,uint256 _slippage) public nonReentrant {
         require(!paused, "The contract is paused !");
         require(
             tokenAmount <= balanceOf(msg.sender),
@@ -273,7 +273,7 @@ contract IndexSwap is TokenBase {
                     amount,
                     address(adapter)
                 );
-                adapter._swapTokenToETH(_tokens[i], amount, msg.sender);
+                adapter._swapTokenToETH(_tokens[i], amount, msg.sender,_slippage);
             }
         }
     }
@@ -284,7 +284,7 @@ contract IndexSwap is TokenBase {
      * @param amount A list of amounts specifying the amount of ETH to be swapped to each token in the portfolio
      * @return investedAmountAfterSlippage
      */
-    function _swapETHToTokens(uint256 tokenAmount, uint256[] memory amount)
+    function _swapETHToTokens(uint256 tokenAmount, uint256[] memory amount, uint256 _slippage)
         internal
         returns (uint256 investedAmountAfterSlippage)
     {
@@ -303,7 +303,8 @@ contract IndexSwap is TokenBase {
             uint256 swapResult = adapter._swapETHToToken{value: swapAmount}(
                 t,
                 swapAmount,
-                vault
+                vault,
+                _slippage
             );
 
             investedAmountAfterSlippage = investedAmountAfterSlippage.add(

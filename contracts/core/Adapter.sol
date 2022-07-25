@@ -15,6 +15,7 @@
 pragma solidity ^0.8.4 || ^0.7.6 || ^0.8.0;
 
 import "@uniswap/lib/contracts/libraries/TransferHelper.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "../interfaces/IUniswapV2Router02.sol";
 import "../interfaces/IWETH.sol";
 
@@ -31,6 +32,8 @@ contract Adapter {
     AccessController public accessController;
     VelvetSafeModule internal gnosisSafe;
     TokenMetadata public tokenMetadata;
+
+    using SafeMath for uint256;
 
     constructor(
         AccessController _accessController,
@@ -97,7 +100,8 @@ contract Adapter {
     function _swapETHToToken(
         address t,
         uint256 swapAmount,
-        address to
+        address to,
+        uint256 _slippage
     ) public payable onlyIndexManager returns (uint256 swapResult) {
         if (t == getETH()) {
             if (tokenMetadata.vTokens(t) != address(0)) {
@@ -116,7 +120,7 @@ contract Adapter {
                 swapResult = pancakeSwapRouter.swapExactETHForTokens{
                     value: swapAmount
                 }(
-                    0,
+                    pancakeSwapRouter.getAmountsOut(swapAmount,getPathForETH(t))[1],
                     getPathForETH(t),
                     address(this),
                     block.timestamp // using 'now' for convenience, for mainnet pass deadline from frontend!
@@ -126,7 +130,7 @@ contract Adapter {
                 swapResult = pancakeSwapRouter.swapExactETHForTokens{
                     value: swapAmount
                 }(
-                    0,
+                    pancakeSwapRouter.getAmountsOut(swapAmount,getPathForETH(t))[1],
                     getPathForETH(t),
                     to,
                     block.timestamp // using 'now' for convenience, for mainnet pass deadline from frontend!
@@ -146,7 +150,8 @@ contract Adapter {
     function _swapTokenToETH(
         address t,
         uint256 swapAmount,
-        address to
+        address to,
+        uint256 _slippage
     ) public onlyIndexManager returns (uint256 swapResult) {
         if (tokenMetadata.vTokens(t) != address(0)) {
             if (t == getETH()) {
@@ -173,7 +178,7 @@ contract Adapter {
                 );
                 swapResult = pancakeSwapRouter.swapExactTokensForETH(
                     amount,
-                    0,
+                    amount.mul(100 - _slippage).div(100),
                     getPathForToken(t),
                     to,
                     block.timestamp
@@ -193,7 +198,8 @@ contract Adapter {
             } else {
                 swapResult = pancakeSwapRouter.swapExactTokensForETH(
                     swapAmount,
-                    0,
+                    swapAmount.mul(100 - _slippage).div(100),
+                    // pancakeSwapRouter.getAmountsOut(swapAmount,getPathForToken(t))[1],
                     getPathForToken(t),
                     to,
                     block.timestamp

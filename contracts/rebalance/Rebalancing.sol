@@ -102,7 +102,8 @@ contract Rebalancing is ReentrancyGuard {
      */
     function sellTokens(
         uint256[] memory _oldWeights,
-        uint256[] memory _newWeights
+        uint256[] memory _newWeights,
+        uint256 _slippage
     ) internal returns (uint256 sumWeightsToSwap) {
         // sell - swap to BNB
         for (uint256 i = 0; i < index.getTokens().length; i++) {
@@ -148,7 +149,8 @@ contract Rebalancing is ReentrancyGuard {
                     adapter._swapTokenToETH(
                         index.getTokens()[i],
                         swapAmount,
-                        address(this)
+                        address(this),
+                        _slippage
                     );
                 }
             } else if (_newWeights[i] > _oldWeights[i]) {
@@ -166,7 +168,8 @@ contract Rebalancing is ReentrancyGuard {
     function buyTokens(
         uint256[] memory _oldWeights,
         uint256[] memory _newWeights,
-        uint256 sumWeightsToSwap
+        uint256 sumWeightsToSwap,
+        uint256 _slippage
     ) internal {
         uint256 totalBNBAmount = address(this).balance;
         for (uint256 i = 0; i < index.getTokens().length; i++) {
@@ -181,7 +184,8 @@ contract Rebalancing is ReentrancyGuard {
                 adapter._swapETHToToken{value: swapAmount}(
                     index.getTokens()[i],
                     swapAmount,
-                    index.vault()
+                    index.vault(),
+                    _slippage
                 );
             }
         }
@@ -190,7 +194,7 @@ contract Rebalancing is ReentrancyGuard {
     /**
      * @notice The function rebalances the token weights in the portfolio
      */
-    function rebalance() internal onlyAssetManager nonReentrant {
+    function rebalance(uint256 _slippage) internal onlyAssetManager nonReentrant {
         require(index.totalSupply() > 0);
 
         uint256 vaultBalance = 0;
@@ -213,8 +217,8 @@ contract Rebalancing is ReentrancyGuard {
             );
         }
 
-        uint256 sumWeightsToSwap = sellTokens(oldWeights, newWeights);
-        buyTokens(oldWeights, newWeights, sumWeightsToSwap);
+        uint256 sumWeightsToSwap = sellTokens(oldWeights, newWeights,_slippage);
+        buyTokens(oldWeights, newWeights, sumWeightsToSwap,_slippage);
 
         lastRebalanced = block.timestamp;
     }
@@ -223,14 +227,14 @@ contract Rebalancing is ReentrancyGuard {
      * @notice The function updates the token weights and rebalances the portfolio to the new weights
      * @param denorms The new token weights of the portfolio
      */
-    function updateWeights(uint96[] calldata denorms) public onlyAssetManager {
+    function updateWeights(uint96[] calldata denorms,uint256 _slippage) public onlyAssetManager {
         require(
             denorms.length == index.getTokens().length,
             "Lengths don't match"
         );
 
         index.updateRecords(index.getTokens(), denorms);
-        rebalance();
+        rebalance(_slippage);
         emit UpdatedWeights(block.timestamp, denorms);
     }
 
@@ -261,7 +265,7 @@ contract Rebalancing is ReentrancyGuard {
      * @param tokens The updated token list of the portfolio
      * @param denorms The new weights for for the portfolio
      */
-    function updateTokens(address[] memory tokens, uint96[] memory denorms)
+    function updateTokens(address[] memory tokens, uint96[] memory denorms, uint256 _slippage)
         public
         onlyAssetManager
     {
@@ -314,7 +318,8 @@ contract Rebalancing is ReentrancyGuard {
                         adapter._swapTokenToETH(
                             index.getTokens()[i],
                             tokenBalance,
-                            address(this)
+                            address(this),
+                            _slippage
                         );
                     }
 
@@ -326,7 +331,7 @@ contract Rebalancing is ReentrancyGuard {
 
         index.updateTokenList(tokens);
 
-        rebalance();
+        rebalance(_slippage);
 
         emit UpdatedTokens(block.timestamp, tokens, denorms);
     }
