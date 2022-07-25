@@ -346,7 +346,7 @@ describe.only("Tests for IndexSwap", () => {
 
       it("update Weights should revert if total Weights not equal 10,000", async () => {
         await expect(
-          rebalancing.updateWeights([6667, 3330],"5")
+          rebalancing.updateWeights([6667, 3330],"50")
         ).to.be.revertedWith("INVALID_WEIGHTS");
       });
 
@@ -357,15 +357,15 @@ describe.only("Tests for IndexSwap", () => {
       });
 
       it("should Update Weights and Rebalance", async () => {
-        await rebalancing.updateWeights([6667, 3333],"5");
+        await rebalancing.updateWeights([6667, 3333],"50");
       });
 
       it("should Update Weights and Rebalance", async () => {
-        await rebalancing.updateWeights([5000, 5000],"5");
+        await rebalancing.updateWeights([5000, 5000],"50");
       });
 
       it("should Update Weights and Rebalance", async () => {
-        await rebalancing.updateWeights([3333, 6667],"5");
+        await rebalancing.updateWeights([3333, 6667],"50");
       });
 
       it("should charge fees and treasury balance should increase", async () => {
@@ -398,7 +398,7 @@ describe.only("Tests for IndexSwap", () => {
           rebalancing.updateTokens(
             [ethInstance.address, daiInstance.address, wbnbInstance.address],
             [2000, 6000, 1000],
-            "5"
+            "50"
           )
         ).to.be.revertedWith("INVALID_WEIGHTS");
       });
@@ -413,7 +413,7 @@ describe.only("Tests for IndexSwap", () => {
         await rebalancing.updateTokens(
           [ethInstance.address, daiInstance.address, wbnbInstance.address],
           [2000, 6000, 2000],
-          "5"
+          "50"
         );
       });
 
@@ -422,7 +422,7 @@ describe.only("Tests for IndexSwap", () => {
         const updateAmount = parseInt(amountIndexToken.toString()) + 1;
         const AMOUNT = ethers.BigNumber.from(updateAmount.toString()); //
 
-        await expect(indexSwap.withdrawFund(AMOUNT,"5")).to.be.revertedWith(
+        await expect(indexSwap.withdrawFund(AMOUNT,"50")).to.be.revertedWith(
           "The contract is paused !"
         );
       });
@@ -437,7 +437,7 @@ describe.only("Tests for IndexSwap", () => {
         const AMOUNT = ethers.BigNumber.from(updateAmount.toString()); //
 
         await expect(
-          indexSwap.connect(nonOwner).withdrawFund(AMOUNT,"5")
+          indexSwap.connect(nonOwner).withdrawFund(AMOUNT,"50")
         ).to.be.revertedWith("caller is not holding given token amount");
       });
 
@@ -446,7 +446,7 @@ describe.only("Tests for IndexSwap", () => {
         //console.log(amountIndexToken, "amountIndexToken");
         const AMOUNT = ethers.BigNumber.from(amountIndexToken); //1BNB
 
-        txObject = await indexSwap.withdrawFund(AMOUNT,"5");
+        txObject = await indexSwap.withdrawFund(AMOUNT,"50");
 
         expect(txObject.confirmations).to.equal(1);
       });

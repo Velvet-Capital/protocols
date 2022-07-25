@@ -26,6 +26,7 @@ import "../vault/VelvetSafeModule.sol";
 import "../venus/VBep20Interface.sol";
 import "../venus/IVBNB.sol";
 import "../venus/TokenMetadata.sol";
+import "hardhat/console.sol";
 
 contract Adapter {
     IUniswapV2Router02 public pancakeSwapRouter;
@@ -176,13 +177,20 @@ contract Adapter {
                     address(pancakeSwapRouter),
                     amount
                 );
+                console.log("swapAmount:    ",amount);
+                uint minAmount = pancakeSwapRouter.getAmountsOut(amount,getPathForToken(t))[1];
+                console.log("getAmountsOut: ",minAmount);
+                console.log("slippageAmount:",minAmount.mul(10000 - _slippage).div(10000));
                 swapResult = pancakeSwapRouter.swapExactTokensForETH(
                     amount,
-                    amount.mul(100 - _slippage).div(100),
+                    minAmount.mul(10000 - _slippage).div(10000),
                     getPathForToken(t),
                     to,
                     block.timestamp
                 )[1];
+                console.log("swapResult:    ",swapResult);
+                console.log("");
+                
             }
         } else {
             TransferHelper.safeApprove(
@@ -196,14 +204,19 @@ contract Adapter {
                 require(success, "Transfer failed.");
                 swapResult = swapAmount;
             } else {
+                console.log("swapAmount:    ",swapAmount);
+                uint minAmount = pancakeSwapRouter.getAmountsOut(swapAmount,getPathForToken(t))[1];
+                console.log("getAmountsOut: ",minAmount);
+                console.log("slippageAmount:",minAmount.mul(10000 - _slippage).div(10000));
                 swapResult = pancakeSwapRouter.swapExactTokensForETH(
                     swapAmount,
-                    swapAmount.mul(100 - _slippage).div(100),
-                    // pancakeSwapRouter.getAmountsOut(swapAmount,getPathForToken(t))[1],
+                    minAmount.mul(10000 - _slippage).div(10000),
                     getPathForToken(t),
                     to,
                     block.timestamp
                 )[1];
+                console.log("swapResult:    ",swapResult);
+                console.log("");
             }
         }
     }
